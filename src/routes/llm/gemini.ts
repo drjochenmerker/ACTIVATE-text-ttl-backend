@@ -21,7 +21,7 @@ dotenv.config();
  *                 message:
  *                   type: string
  *                   example: "Connected to Gemini! Ready to assist.\n"
- *                 model: 
+ *                 model:
  *                   type: string
  *                   example: "gemini-2.0-flash"
  */
@@ -30,8 +30,9 @@ const router = Router();
 router.get('/connectionTest', async (req: Request, res: Response) => {
     const gemini = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
     const response = await gemini.models.generateContent({
-        model: "gemini-2.0-flash",
-        contents: "Generate a short message confirming the connection to Gemini.",
+        model: 'gemini-2.0-flash',
+        contents:
+            'Generate a short message confirming the connection to Gemini.',
     });
     res.json({ message: response.text, model: response.modelVersion });
 });

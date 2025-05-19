@@ -1,4 +1,4 @@
-import express, { Request, Response } from 'express';
+import express from 'express';
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 import apiRouter from './routes/api';
@@ -13,10 +13,11 @@ const swaggerSpec = swaggerJsdoc({
         info: {
             title: 'Activate Text zu Knowledge Graph Backend API Documentation',
             version: '0.0.1',
-            description: 'Backend for the Activate Text to Knowledge Graph project. The backend is responsible for performing requests to the various LLMs and other APIs used for verification and storage purposes.',
+            description:
+                'Backend for the Activate Text to Knowledge Graph project. The backend is responsible for performing requests to the various LLMs and other APIs used for verification and storage purposes.',
         },
     },
-    apis: ['./src/routes/*.ts', './src/routes/*/*.ts']
+    apis: ['./src/routes/*.ts', './src/routes/*/*.ts'],
 });
 
 // API Endpoints

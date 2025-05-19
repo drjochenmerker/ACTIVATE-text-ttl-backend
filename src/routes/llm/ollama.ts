@@ -36,7 +36,12 @@ const router = Router();
 router.get('/list', async (req: Request, res: Response) => {
     const ollamares = await ollama.list();
     console.log(ollamares.models);
-    res.json({ models: ollamares.models.map((model) => ({ name: model.name, model: model.model })) });
+    res.json({
+        models: ollamares.models.map((model) => ({
+            name: model.name,
+            model: model.model,
+        })),
+    });
 });
 
 export default router;
