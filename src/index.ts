@@ -1,28 +1,28 @@
 import express, { Request, Response } from 'express';
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
-import helloRoutes from './routes/hello';
+import apiRouter from './routes/api';
 
 const app = express();
-const port = 3000;
+const port = process.env.BACKEND_PORT || 8500;
 
 // Swagger Setup
 const swaggerSpec = swaggerJsdoc({
     swaggerDefinition: {
         openapi: '3.0.0',
         info: {
-            title: 'My API',
-            version: '1.0.0',
-            description: 'API documentation',
+            title: 'Activate Text zu Knowledge Graph Backend API Documentation',
+            version: '0.0.1',
+            description: 'Backend for the Activate Text to Knowledge Graph project. The backend is responsible for performing requests to the various LLMs and other APIs used for verification and storage purposes.',
         },
     },
-    apis: ['./src/routes/*.ts'], // Pfad zu deinen API-Dateien
+    apis: ['./src/routes/*.ts', './src/routes/*/*.ts']
 });
 
-// API Endpunkte
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+// API Endpoints
+app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.use('/api', apiRouter);
 
-app.use('/api', helloRoutes);
 // Starte den Server
 app.listen(port, () => {
     console.log(`Server läuft auf http://localhost:${port}`);
