@@ -2,15 +2,21 @@ stages:
     - lint
     - build
 
-before_script:
-    - npm ci
+cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+        - node_modules/
 
 lint:
     stage: lint
+    image: node:lts-bookworm-slim
     script:
+        - npm ci
         - npm run lint
 
 build:
     stage: build
+    image: node:lts-bookworm-slim
     script:
+        - npm ci
         - npm run build
