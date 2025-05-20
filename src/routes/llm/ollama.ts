@@ -9,7 +9,7 @@ const ollama = new Ollama();
  * /api/llm/ollama/list:
  *   get:
  *     description: Lists all available local models from the Ollama
- *     tags: [LLM]
+ *     tags: [Ollama]
  *     responses:
  *       200:
  *         description: List of available models
@@ -33,9 +33,9 @@ const ollama = new Ollama();
 
 const router = Router();
 
+// Route to list all available models
 router.get('/list', async (req: Request, res: Response) => {
     const ollamares = await ollama.list();
-    console.log(ollamares.models);
     res.json({
         models: ollamares.models.map((model) => ({
             name: model.name,

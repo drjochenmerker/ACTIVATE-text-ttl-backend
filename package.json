@@ -1,6 +1,6 @@
 {
     "name": "text-ttl-backend",
-    "version": "1.0.0",
+    "version": "0.0.1",
     "main": "index.js",
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
@@ -21,11 +21,13 @@
         "dotenv": "^16.5.0",
         "express": "^5.1.0",
         "ollama": "^0.5.15",
+        "openai": "^4.100.0",
         "swagger-jsdoc": "^6.2.8",
         "swagger-ui-express": "^5.0.1",
         "typescript": "^5.8.3"
     },
     "devDependencies": {
+        "@types/cors": "^2.8.18",
         "@types/express": "^5.0.2",
         "@types/node": "^22.15.19",
         "@types/swagger-jsdoc": "^6.0.4",
@@ -36,5 +38,5 @@
         "prettier": "^3.5.3",
         "ts-node-dev": "^2.0.0"
     },
-    "type": "module"
+    "type": "commonjs"
 }

@@ -1,15 +1,14 @@
 // src/routes/gemini.ts
 import { Router, Request, Response } from 'express';
 import { GoogleGenAI } from '@google/genai';
-import dotenv from 'dotenv';
-dotenv.config();
+import 'dotenv/config'
 
 /**
  * @swagger
  * /api/llm/gemini/connectionTest:
  *   get:
- *     description: Tests the connection to the Gemini API
- *     tags: [LLM]
+ *     description: Tests the connection to Gemini
+ *     tags: [Gemini]
  *     responses:
  *       200:
  *         description: Successful connection
@@ -27,6 +26,7 @@ dotenv.config();
  */
 const router = Router();
 
+// Route to test the connection to the Gemini API
 router.get('/connectionTest', async (req: Request, res: Response) => {
     const gemini = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
     const response = await gemini.models.generateContent({
