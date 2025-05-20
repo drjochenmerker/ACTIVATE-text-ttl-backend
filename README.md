@@ -1,4 +1,4 @@
-# Activate Text zu Knowledge Graph Backend
+# Activate Text to Knowledge Graph Backend
 
 ## Description
 
@@ -28,6 +28,15 @@ GEMINI_API_KEY=<API_KEY>
 # Activate Backend
 ACTIVATE_URL=<URL>
 ACTIVATE_PORT=<PORT or FALSE if routing through a proxy>
+
+# Azure
+AZURE_OPENAI_URL="<Azure Resource URL>"
+AZURE_OPENAI_KEY="<Azure Resource Key>"
+AZURE_OPENAI_VERSION="<Api Version - Current: 2025-04-01-preview>"
+
+# OpenRouter
+OPENROUTER_KEY="<OpenRouter Api Key>"
+
 ```
 
 ##### Development Mode
