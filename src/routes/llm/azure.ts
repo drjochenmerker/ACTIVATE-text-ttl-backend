@@ -26,21 +26,25 @@ const router = Router();
 
 // Route to test the connection to the Gemini API
 router.get('/connectionTest', async (req: Request, res: Response) => {
-    const openai = new AzureOpenAI({
-        endpoint: process.env.AZURE_OPENAI_URL,
-        apiKey: process.env.AZURE_OPENAI_KEY,
-        apiVersion: process.env.AZURE_OPENAI_VERSION,
-        deployment: 'gpt-4o-mini'
-    });
-    const response = await openai.chat.completions.create({
-        messages: [
-            { role: 'system', content: 'This is a connection Test. Confirm if the connection was successful.' },
-            { role: 'user', content: 'Generate a short message confirming the connection to OpenAI.' }
-        ],
-        model: 'gpt-4o-mini',
-        temperature: 1,
-    })
-    res.json({ message: response.choices[0].message });
+    if (!process.env.AZURE_DEPLOYMENT) {
+        res.json({ status: 501, message: 'Error: Azure deployment is not set' })
+    } else {
+        const openai = new AzureOpenAI({
+            endpoint: process.env.AZURE_OPENAI_URL,
+            apiKey: process.env.AZURE_OPENAI_KEY,
+            apiVersion: process.env.AZURE_OPENAI_VERSION,
+            deployment: process.env.AZURE_DEPLOYMENT,
+        });
+        const response = await openai.chat.completions.create({
+            messages: [
+                { role: 'system', content: 'This is a connection Test. Confirm if the connection was successful.' },
+                { role: 'user', content: 'Generate a short message confirming the connection to OpenAI.' }
+            ],
+            model: process.env.AZURE_DEPLOYMENT,
+            temperature: 1,
+        })
+        res.json({ message: response.choices[0].message });
+    }
 });
 
 /**

@@ -24,7 +24,7 @@ const swaggerSpec = swaggerJsdoc({
 
 // Middleware
 app.use(cors({
-    origin: process.env.ACTIVATE_URL,
+    origin: `${process.env.ACTIVATE_URL}:${process.env.ACTIVATE_PORT}`,
     methods: ['GET', 'POST'],
     credentials: true
 }));
