@@ -1,7 +1,7 @@
 // src/routes/gemini.ts
 import { Router, Request, Response } from 'express';
 import { GoogleGenAI } from '@google/genai';
-import 'dotenv/config'
+import 'dotenv/config';
 
 /**
  * @swagger
@@ -28,13 +28,18 @@ const router = Router();
 
 // Route to test the connection to the Gemini API
 router.get('/connectionTest', async (req: Request, res: Response) => {
-    const gemini = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const gemini = new GoogleGenAI({
+        apiKey: process.env.GEMINI_API_KEY,
+    });
     const response = await gemini.models.generateContent({
         model: 'gemini-2.0-flash',
         contents:
             'Generate a short message confirming the connection to Gemini.',
     });
-    res.json({ message: response.text, model: response.modelVersion });
+    res.json({
+        message: response.text,
+        model: response.modelVersion,
+    });
 });
 
 export default router;

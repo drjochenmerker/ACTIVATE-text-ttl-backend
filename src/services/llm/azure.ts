@@ -1,6 +1,6 @@
 // src/routes/azure.ts
 import { Router, Request, Response } from 'express';
-import 'dotenv/config'
+import 'dotenv/config';
 import { AzureOpenAI } from 'openai';
 import { Model } from 'openai/resources/models';
 
@@ -27,7 +27,10 @@ const router = Router();
 // Route to test the connection to the Gemini API
 router.get('/connectionTest', async (req: Request, res: Response) => {
     if (!process.env.AZURE_DEPLOYMENT) {
-        res.json({ status: 501, message: 'Error: Azure deployment is not set' })
+        res.json({
+            status: 501,
+            message: 'Error: Azure deployment is not set',
+        });
     } else {
         const openai = new AzureOpenAI({
             endpoint: process.env.AZURE_OPENAI_URL,
@@ -37,13 +40,23 @@ router.get('/connectionTest', async (req: Request, res: Response) => {
         });
         const response = await openai.chat.completions.create({
             messages: [
-                { role: 'system', content: 'This is a connection Test. Confirm if the connection was successful.' },
-                { role: 'user', content: 'Generate a short message confirming the connection to OpenAI.' }
+                {
+                    role: 'system',
+                    content:
+                        'This is a connection Test. Confirm if the connection was successful.',
+                },
+                {
+                    role: 'user',
+                    content:
+                        'Generate a short message confirming the connection to OpenAI.',
+                },
             ],
             model: process.env.AZURE_DEPLOYMENT,
             temperature: 1,
-        })
-        res.json({ message: response.choices[0].message });
+        });
+        res.json({
+            message: response.choices[0].message,
+        });
     }
 });
 
@@ -73,10 +86,12 @@ router.get('/models', async (req: Request, res: Response) => {
     const openai = new AzureOpenAI({
         endpoint: process.env.AZURE_OPENAI_URL,
         apiKey: process.env.AZURE_OPENAI_KEY,
-        apiVersion: process.env.AZURE_OPENAI_VERSION
+        apiVersion: process.env.AZURE_OPENAI_VERSION,
     });
     const response = await openai.models.list();
-    const modelList = response.data.filter((model) => model.id.includes('gpt')).map((model: Model) => model.id);
+    const modelList = response.data
+        .filter((model) => model.id.includes('gpt'))
+        .map((model: Model) => model.id);
     res.json({ models: modelList });
 });
 

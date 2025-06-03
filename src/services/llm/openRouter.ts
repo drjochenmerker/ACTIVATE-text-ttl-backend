@@ -1,7 +1,8 @@
 // src/routes/openRouter.ts
 import { Router, Request, Response } from 'express';
-import 'dotenv/config'
+import 'dotenv/config';
 import OpenAI from 'openai';
+import { sys } from 'typescript';
 
 /**
  * @swagger
@@ -38,7 +39,7 @@ import OpenAI from 'openai';
  *                       type: string
  *                       example: null
  *                     reasoning:
- *                       type: string 
+ *                       type: string
  *                       example: null
  *       400:
  *         description: Bad request
@@ -59,18 +60,31 @@ router.get('/connectionTest', async (req: Request, res: Response) => {
         baseURL: 'https://openrouter.ai/api/v1',
         apiKey: process.env.OPENROUTER_KEY,
     });
-    const model = req.query.model?.toString() || 'meta-llama/llama-3.3-8b-instruct:free';
+    const model =
+        req.query.model?.toString() || 'meta-llama/llama-3.3-8b-instruct:free';
     if (model.slice(-4) !== 'free') {
-        res.status(400).json({ error: 'The model must exist and be free to use.' });
+        res.status(400).json({
+            error: 'The model must exist and be free to use.',
+        });
     }
     const response = await openai.chat.completions.create({
         model: model,
         messages: [
-            { role: 'system', content: 'This is a connection Test. Confirm if the connection was successful.' },
-            { role: 'user', content: 'Generate a short message confirming the connection to OpenRouter.' }
+            {
+                role: 'system',
+                content:
+                    'This is a connection Test. Confirm if the connection was successful.',
+            },
+            {
+                role: 'user',
+                content:
+                    'Generate a short message confirming the connection to OpenRouter.',
+            },
         ],
     });
-    res.json({ message: response.choices[0].message });
+    res.json({
+        message: response.choices[0].message,
+    });
 });
 
 /**
@@ -103,16 +117,39 @@ router.get('/connectionTest', async (req: Request, res: Response) => {
 // Route to list all available free models
 router.get('/models', async (req: Request, res: Response) => {
     // List available models (GET /models)
-    const response = await fetch("https://openrouter.ai/api/v1/models", {
-        method: "GET"
+    const response = await fetch('https://openrouter.ai/api/v1/models', {
+        method: 'GET',
     });
     const result = await response.json();
     res.json({
-        models: result.data.filter((model: any) => model.name.includes('free')).map((model: any) => ({
-            name: model.name,
-            id: model.id,
-        }))
+        models: result.data
+            .filter((model: any) => model.name.includes('free'))
+            .map((model: any) => ({
+                name: model.name,
+                id: model.id,
+            })),
     });
 });
+
+export async function queryOpenRouter(model: string, systemPrompt: string, userPrompt: string): Promise<string> {
+    const openai = new OpenAI({
+        baseURL: 'https://openrouter.ai/api/v1',
+        apiKey: process.env.OPENROUTER_KEY,
+    });
+    const response = await openai.chat.completions.create({
+        model: model,
+        messages: [
+            {
+                role: 'system',
+                content: systemPrompt,
+            },
+            {
+                role: 'user',
+                content: userPrompt,
+            },
+        ],
+    });
+    return response.choices[0].message.content || '';
+}
 
 export default router;
