@@ -2,6 +2,7 @@
 import { Router, Request, Response } from 'express';
 import { GoogleGenAI } from '@google/genai';
 import 'dotenv/config';
+import { writeToLog } from '../utils';
 
 /**
  * @swagger
@@ -41,5 +42,33 @@ router.get('/connectionTest', async (req: Request, res: Response) => {
         model: response.modelVersion,
     });
 });
+
+/**
+ * Generic function to query Gemini
+ * @param model gemini model id
+ * @param systemPrompt system prompt
+ * @param userPrompt user prompt
+ * @returns message or 'error'
+ */
+export async function queryGemini(model: string, systemPrompt: string, userPrompt: string): Promise<string> {
+    const gemini = new GoogleGenAI({
+        apiKey: process.env.GEMINI_API_KEY,
+    });
+    try {
+        const response = await gemini.models.generateContent({
+            model: model,
+            contents: userPrompt,
+            config: {
+                systemInstruction: systemPrompt,
+                temperature: 0.2
+            }
+        });
+        writeToLog("Gemini Request", response)
+        return response.text || 'error'
+    } catch (error) {
+        console.error('Error querying Gemini:', error);
+        return "error"
+    }
+}
 
 export default router;

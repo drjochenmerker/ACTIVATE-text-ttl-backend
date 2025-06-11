@@ -18,4 +18,14 @@ export const errorMessages = {
         de: 'Gewählter Generator wird derzeit nicht unterstützt',
         sv: 'Vald generator stöds för närvarande inte',
     },
+    validationFailed: {
+        en: 'Validation of the generated Turtle Syntax failed after multiple attempts',
+        de: 'Validierung der generierten Turtle-Syntax ist nach mehreren Versuchen fehlgeschlagen',
+        sv: 'Validering av den genererade Turtle-syntaxen misslyckades efter flera försök',
+    },
+    generationFailed: {
+        en: 'The chosen generator failed to generate Turtle Syntax',
+        de: 'Der gewählte Generator konnte keine Turtle-Syntax generieren',
+        sv: 'Den valda generatorn misslyckades med att generera Turtle-syntax',
+    },
 }

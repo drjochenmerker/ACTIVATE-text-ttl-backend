@@ -3,6 +3,7 @@ import { Router, Request, Response } from 'express';
 import 'dotenv/config';
 import { AzureOpenAI } from 'openai';
 import { Model } from 'openai/resources/models';
+import { writeToLog } from '../utils';
 
 /**
  * @swagger
@@ -94,5 +95,45 @@ router.get('/models', async (req: Request, res: Response) => {
         .map((model: Model) => model.id);
     res.json({ models: modelList });
 });
+
+/**
+ * Generic function to query Azure OpenAI
+ * @param systemPrompt System prompt
+ * @param userPrompt User prompt
+ * @returns Result or 'error'
+ */
+export async function queryAzure(systemPrompt: string, userPrompt: string): Promise<string> {
+    if (!process.env.AZURE_DEPLOYMENT) {
+        return 'error'
+    } else {
+        const openai = new AzureOpenAI({
+            endpoint: process.env.AZURE_OPENAI_URL,
+            apiKey: process.env.AZURE_OPENAI_KEY,
+            apiVersion: process.env.AZURE_OPENAI_VERSION,
+            deployment: process.env.AZURE_DEPLOYMENT,
+        });
+        try {
+            const response = await openai.chat.completions.create({
+                messages: [
+                    {
+                        role: 'system',
+                        content: systemPrompt,
+                    },
+                    {
+                        role: 'user',
+                        content: userPrompt,
+                    },
+                ],
+                model: process.env.AZURE_DEPLOYMENT,
+                temperature: 0.2,
+            });
+            writeToLog("Azure Request", response)
+            return response.choices[0].message.content || 'error';
+        } catch (error) {
+            console.error('Error querying Azure OpenAI:', error);
+            return 'error';
+        }
+    }
+}
 
 export default router;

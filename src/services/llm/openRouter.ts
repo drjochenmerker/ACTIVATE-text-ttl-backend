@@ -3,6 +3,7 @@ import { Router, Request, Response } from 'express';
 import 'dotenv/config';
 import OpenAI from 'openai';
 import { sys } from 'typescript';
+import { writeToLog } from '../utils';
 
 /**
  * @swagger
@@ -131,25 +132,38 @@ router.get('/models', async (req: Request, res: Response) => {
     });
 });
 
+/**
+ * Generic function to query OpenRouter with a model, system prompt, and user prompt.
+ * @param model openrouter model ID
+ * @param systemPrompt system prompt
+ * @param userPrompt user prompt
+ * @returns message or 'error'
+ */
 export async function queryOpenRouter(model: string, systemPrompt: string, userPrompt: string): Promise<string> {
     const openai = new OpenAI({
         baseURL: 'https://openrouter.ai/api/v1',
         apiKey: process.env.OPENROUTER_KEY,
     });
-    const response = await openai.chat.completions.create({
-        model: model,
-        messages: [
-            {
-                role: 'system',
-                content: systemPrompt,
-            },
-            {
-                role: 'user',
-                content: userPrompt,
-            },
-        ],
-    });
-    return response.choices[0].message.content || '';
+    try {
+        const response = await openai.chat.completions.create({
+            model: model,
+            messages: [
+                {
+                    role: 'system',
+                    content: systemPrompt,
+                },
+                {
+                    role: 'user',
+                    content: userPrompt,
+                },
+            ],
+        });
+        writeToLog("OpenRouter Request: " + model, response)
+        return response.choices[0].message.content || 'error';
+    } catch (error) {
+        console.error('Error querying OpenRouter:', error);
+        return "error"
+    }
 }
 
 export default router;
