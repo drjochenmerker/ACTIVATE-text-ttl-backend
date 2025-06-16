@@ -12,7 +12,7 @@ type Feedback = {
     errors: string[]
 }
 
-const regexp = {
+const regexp: Record<string, RegExp> = {
     dateTime:
         /^(-?(?:[1-9][0-9]*)?[0-9]{4})-(1[0-2]|0[1-9])-(3[0-1]|0[1-9]|[1-2][0-9])?T(2[0-3]|[0-1][0-9]):([0-5][0-9]):([0-5][0-9])(\.[0-9]+)?(Z|[+-](?:2[0-3]|[0-1][0-9]):[0-5][0-9])?$/,
     double: /[-+]?\d*([.]\d+)?/,
@@ -35,7 +35,7 @@ export async function validate(turtle: string): Promise<Feedback> {
                     const value = triple.object.value
                     let type = triple.object.datatype.value
                     type = type.replace('http://www.w3.org/2001/XMLSchema#', '')
-                    if ((regexp as any)[type] && !(regexp as any)[type].test(value)) {
+                    if (regexp[type] && !regexp[type].test(value)) {
                         feedback.warnings.push(
                             `xsd:${type} does not validate for literal. {${triple.subject.value}, ${triple.predicate.value}, ${triple.object.value}}`
                         )

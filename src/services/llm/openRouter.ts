@@ -2,8 +2,8 @@
 import { Router, Request, Response } from 'express';
 import 'dotenv/config';
 import OpenAI from 'openai';
-import { sys } from 'typescript';
-import { writeToLog } from '../utils';
+import { writeToLog } from '../utils.js';
+import { logFilenames } from '../../data/staticContent.js';
 
 /**
  * @swagger
@@ -124,8 +124,8 @@ router.get('/models', async (req: Request, res: Response) => {
     const result = await response.json();
     res.json({
         models: result.data
-            .filter((model: any) => model.name.includes('free'))
-            .map((model: any) => ({
+            .filter((model: Record<string, string>) => model.name.includes('free'))
+            .map((model: Record<string, string>) => ({
                 name: model.name,
                 id: model.id,
             })),
@@ -139,7 +139,7 @@ router.get('/models', async (req: Request, res: Response) => {
  * @param userPrompt user prompt
  * @returns message or 'error'
  */
-export async function queryOpenRouter(model: string, systemPrompt: string, userPrompt: string): Promise<string> {
+export async function queryOpenRouter(model: string, systemPrompt: string, userPrompt: string, logFilename: string = logFilenames.misc): Promise<string> {
     const openai = new OpenAI({
         baseURL: 'https://openrouter.ai/api/v1',
         apiKey: process.env.OPENROUTER_KEY,
@@ -158,7 +158,7 @@ export async function queryOpenRouter(model: string, systemPrompt: string, userP
                 },
             ],
         });
-        writeToLog("OpenRouter Request: " + model, response)
+        writeToLog(logFilename, "OpenRouter Request: " + model, response)
         return response.choices[0].message.content || 'error';
     } catch (error) {
         console.error('Error querying OpenRouter:', error);

@@ -21,3 +21,10 @@ export type GeneratorPipeline = {
     name: multiLanguageString;
     description: multiLanguageString;
 };
+// Prompt Shot Type
+export enum PromptShot {
+    zero,
+    one,
+    few,
+    many
+}

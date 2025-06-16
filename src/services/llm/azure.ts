@@ -4,6 +4,7 @@ import 'dotenv/config';
 import { AzureOpenAI } from 'openai';
 import { Model } from 'openai/resources/models';
 import { writeToLog } from '../utils';
+import { logFilenames } from '../../data/staticContent';
 
 /**
  * @swagger
@@ -102,7 +103,7 @@ router.get('/models', async (req: Request, res: Response) => {
  * @param userPrompt User prompt
  * @returns Result or 'error'
  */
-export async function queryAzure(systemPrompt: string, userPrompt: string): Promise<string> {
+export async function queryAzure(systemPrompt: string, userPrompt: string, logFilename: string = logFilenames.misc): Promise<string> {
     if (!process.env.AZURE_DEPLOYMENT) {
         return 'error'
     } else {
@@ -127,7 +128,7 @@ export async function queryAzure(systemPrompt: string, userPrompt: string): Prom
                 model: process.env.AZURE_DEPLOYMENT,
                 temperature: 0.2,
             });
-            writeToLog("Azure Request", response)
+            writeToLog(logFilename, "Azure Request", response)
             return response.choices[0].message.content || 'error';
         } catch (error) {
             console.error('Error querying Azure OpenAI:', error);

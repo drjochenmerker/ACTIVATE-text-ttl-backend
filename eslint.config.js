@@ -23,9 +23,16 @@ export default [
             globals: {
                 console: 'readonly',
                 process: 'readonly',
+                fetch: 'readonly',
             },
         },
     },
     js.configs.recommended,
     prettier,
+    {
+        files: ['**/*.ts'],
+        rules: {
+            'no-unused-vars': 'off',
+        },
+    },
 ];

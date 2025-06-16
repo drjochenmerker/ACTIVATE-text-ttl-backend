@@ -29,3 +29,9 @@ export const errorMessages = {
         sv: 'Den valda generatorn misslyckades med att generera Turtle-syntax',
     },
 }
+
+export const logFilenames = {
+    misc: 'misc',
+    start: 'generator-start',
+    edit: 'generator-edit',
+}

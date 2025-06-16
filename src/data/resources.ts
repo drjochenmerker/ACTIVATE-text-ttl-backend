@@ -1,16 +1,16 @@
-import { GeneratorPipeline, LLM } from './types';
+import { GeneratorPipeline, LLM } from './types.js';
 
 export const supportedLLMs: LLM[] = [
-    {
-        id: 'gemini-2.5-pro-preview-05-06',
-        name: 'Gemini 2.5 Pro Preview',
-        endpoint: 'gemini',
-        description: {
-            de: 'Gemini 2.5 Pro ist eine verbesserte Version des Gemini-Modells, die für professionelle Anwendungen optimiert wurde.',
-            en: 'Gemini 2.5 Pro is an enhanced version of the Gemini model, optimized for professional applications.',
-            sv: 'Gemini 2.5 Pro är en förbättrad version av Gemini-modellen, optimerad för professionella applikationer.',
-        },
-    },
+    // {
+    //     id: 'gemini-2.5-pro-preview-05-06',
+    //     name: 'Gemini 2.5 Pro Preview',
+    //     endpoint: 'gemini',
+    //     description: {
+    //         de: 'Gemini 2.5 Pro ist eine verbesserte Version des Gemini-Modells, die für professionelle Anwendungen optimiert wurde.',
+    //         en: 'Gemini 2.5 Pro is an enhanced version of the Gemini model, optimized for professional applications.',
+    //         sv: 'Gemini 2.5 Pro är en förbättrad version av Gemini-modellen, optimerad för professionella applikationer.',
+    //     },
+    // },
     {
         id: 'gemini-2.5-flash-preview-05-20',
         name: 'Gemini 2.5 Flash Preview',
@@ -115,11 +115,24 @@ export const supportedLLMs: LLM[] = [
 
 export const implementedGenerators: GeneratorPipeline[] = [
     {
-        id: 'persona-generator',
+        id: 'persona-generator#0',
         name: {
-            de: 'Persona Generator',
-            en: 'Persona Generator',
-            sv: 'Persona Generator',
+            de: 'Persona Generator (0-Shot)',
+            en: 'Persona Generator (0-Shot)',
+            sv: 'Persona Generator (0-Shot)',
+        },
+        description: {
+            de: 'Der Persona Generator, welcher den Knowledge Graph auf Basis von Personas generiert. Dem LLM wird die Rolle eines Experten zugewiesen, um die Ergebnisse zu verbessern.',
+            en: 'The Persona Generator, which generates the knowledge graph based on personas. The LLM is assigned the role of an expert to improve the results.',
+            sv: 'Persona Generator, som genererar kunskapsgrafen baserat på personas. LLM tilldelas rollen som expert för att förbättra resultaten.',
+        },
+    },
+    {
+        id: 'persona-generator#1',
+        name: {
+            de: 'Persona Generator (1-Shot)',
+            en: 'Persona Generator (1-Shot)',
+            sv: 'Persona Generator (1-Shot)',
         },
         description: {
             de: 'Der Persona Generator, welcher den Knowledge Graph auf Basis von Personas generiert. Dem LLM wird die Rolle eines Experten zugewiesen, um die Ergebnisse zu verbessern.',

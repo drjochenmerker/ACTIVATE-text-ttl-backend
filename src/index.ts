@@ -1,11 +1,11 @@
 import express from 'express';
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
-import apiRouter from './routes/api';
+import apiRouter from './routes/api.js';
 import { rateLimit } from 'express-rate-limit';
 import cors from 'cors';
 import { createServer } from 'node:http';
-import { setupSocketIO } from './socket';
+import { setupSocketIO } from './socket.js';
 
 const app = express();
 app.use(express.json());

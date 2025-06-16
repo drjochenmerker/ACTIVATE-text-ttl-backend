@@ -14,8 +14,8 @@ export function parseLLMOutput(message: string): string {
  * Writes the input to a debug log file with a timestamp in root
  */
 import * as fs from 'fs';
-export function writeToLog(header: string, content: string | Object): void {
-    const file = fs.createWriteStream('./debug.log', { flags: 'a' });
+export function writeToLog(filename: string, header: string, content: string | object): void {
+    const file = fs.createWriteStream(`./logs/${filename}.log`, { flags: 'a' });
     if (typeof content === 'object') {
         content = JSON.stringify(content, null, 2); // Format object as JSON
     }
@@ -23,6 +23,6 @@ export function writeToLog(header: string, content: string | Object): void {
     file.end();
 }
 
-export function clearLog(): void {
-    fs.writeFileSync('./debug.log', '', 'utf8'); // Clear the log file
+export function clearLog(filename: string): void {
+    fs.writeFileSync(`./logs/${filename}.log`, '', 'utf8'); // Clear the log file
 }
