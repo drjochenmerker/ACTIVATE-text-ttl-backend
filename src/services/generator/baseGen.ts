@@ -1,36 +1,9 @@
-/**
- * Removes trailing 'turtle' and any triple backticks from a string
- * @param message - The message string to parse.
- * @returns parsed message
- */
-export function parseLLMOutput(message: string): string {
-    const parsedMessage = message.replace(/```(?:ttl)?/gi, '')
-        .replace(/^\s*turtle:?/i, '')
-        .trim();
-    return parsedMessage;
-}
-
-/**
- * Writes the input to a debug log file with a timestamp in root
- */
-import * as fs from 'fs';
-import { LLM } from '../data/types';
-import { logFilenames } from '../data/staticContent';
-import { queryOpenRouter } from './llm/openRouter';
-import { queryGemini } from './llm/gemini';
-import { queryAzure } from './llm/azure';
-export function writeToLog(filename: string, header: string, content: string | object): void {
-    const file = fs.createWriteStream(`./logs/${filename}.log`, { flags: 'a' });
-    if (typeof content === 'object') {
-        content = JSON.stringify(content, null, 2); // Format object as JSON
-    }
-    file.write(`${new Date().toISOString()} - ${header}\n${content}\n`);
-    file.end();
-}
-
-export function clearLog(filename: string): void {
-    fs.writeFileSync(`./logs/${filename}.log`, '', 'utf8'); // Clear the log file
-}
+import { LLM } from "../../data/types";
+import { queryOpenRouter } from "../llm/openRouter";
+import { parseLLMOutput } from "../utils";
+import { queryGemini } from "../llm/gemini";
+import { queryAzure } from "../llm/azure";
+import { logFilenames } from "../../data/staticContent";
 
 /**
  * Generates a knowledge graph using no prompt engineering by querying the specified Large Language Model (LLM) endpoint.
@@ -55,7 +28,7 @@ export async function requestKgGen(llm: LLM, systemPrompt: string, activityText:
             res = parseLLMOutput(await queryGemini(llm.id, systemPrompt, activityText, logFilename));
             break;
         case 'azure':
-            res = parseLLMOutput(await queryAzure(systemPrompt, activityText, logFilename));
+            res = parseLLMOutput(await queryAzure(llm.id, systemPrompt, activityText, logFilename));
             break;
         default:
             return Promise.reject(new Error("Unsupported LLM endpoint"));

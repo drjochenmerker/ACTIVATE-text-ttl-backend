@@ -2,8 +2,8 @@ import { GeneratorPipeline, LLM } from './types.js';
 
 export const supportedLLMs: LLM[] = [
     // {
-    //     id: 'gemini-2.5-pro-preview-05-06',
-    //     name: 'Gemini 2.5 Pro Preview',
+    //     id: 'gemini-2.5-pro',
+    //     name: 'Gemini 2.5 Pro',
     //     endpoint: 'gemini',
     //     description: {
     //         de: 'Gemini 2.5 Pro ist eine verbesserte Version des Gemini-Modells, die für professionelle Anwendungen optimiert wurde.',
@@ -11,9 +11,19 @@ export const supportedLLMs: LLM[] = [
     //         sv: 'Gemini 2.5 Pro är en förbättrad version av Gemini-modellen, optimerad för professionella applikationer.',
     //     },
     // },
+    // {
+    //     id: 'gemini-2.5-flash-preview-05-20',
+    //     name: 'Gemini 2.5 Flash Preview',
+    //     endpoint: 'gemini',
+    //     description: {
+    //         de: 'Gemini 2.5 Flash ist eine schnellere Version des Gemini-Modells, optimiert für Echtzeitanwendungen.',
+    //         en: 'Gemini 2.5 Flash is a faster version of the Gemini model, optimized for real-time applications.',
+    //         sv: 'Gemini 2.5 Flash är en snabbare version av Gemini-modellen, optimerad för realtidsapplikationer.',
+    //     },
+    // },
     {
-        id: 'gemini-2.5-flash-preview-05-20',
-        name: 'Gemini 2.5 Flash Preview',
+        id: 'gemini-2.5-flash',
+        name: 'Gemini 2.5 Flash',
         endpoint: 'gemini',
         description: {
             de: 'Gemini 2.5 Flash ist eine schnellere Version des Gemini-Modells, optimiert für Echtzeitanwendungen.',
@@ -21,16 +31,16 @@ export const supportedLLMs: LLM[] = [
             sv: 'Gemini 2.5 Flash är en snabbare version av Gemini-modellen, optimerad för realtidsapplikationer.',
         },
     },
-    {
-        id: 'gemini-2.0-flash',
-        name: 'Gemini 2.0 Flash',
-        endpoint: 'gemini',
-        description: {
-            de: 'Gemini 2.0 Flash ist eine schnelle Version des Gemini-Modells, die für Echtzeitanwendungen entwickelt wurde.',
-            en: 'Gemini 2.0 Flash is a fast version of the Gemini model designed for real-time applications.',
-            sv: 'Gemini 2.0 Flash är en snabb version av Gemini-modellen, designad för realtidsapplikationer.',
-        },
-    },
+    // {
+    //     id: 'gemini-2.0-flash',
+    //     name: 'Gemini 2.0 Flash',
+    //     endpoint: 'gemini',
+    //     description: {
+    //         de: 'Gemini 2.0 Flash ist eine schnelle Version des Gemini-Modells, die für Echtzeitanwendungen entwickelt wurde.',
+    //         en: 'Gemini 2.0 Flash is a fast version of the Gemini model designed for real-time applications.',
+    //         sv: 'Gemini 2.0 Flash är en snabb version av Gemini-modellen, designad för realtidsapplikationer.',
+    //     },
+    // },
     {
         id: 'gemma-3-27b-it',
         name: 'Gemma 3',
@@ -41,14 +51,24 @@ export const supportedLLMs: LLM[] = [
             sv: 'Gemma 3 27B är en kraftfull språkmodell designad för komplexa textbehandlingsuppgifter.',
         },
     },
+    // {
+    //     id: 'model-router',
+    //     name: 'Azure Model Router',
+    //     endpoint: 'azure',
+    //     description: {
+    //         de: 'Azure Model Router ist ein intelligenter LLM-Router, der Anfragen an das am besten geeignete OpenAI-Modell weiterleitet.',
+    //         en: 'Azure Model Router is an intelligent LLM router that directs requests to the most suitable OpenAI model.',
+    //         sv: 'Azure Model Router är en intelligent LLM-router som dirigerar förfrågningar till den mest lämpliga OpenAI-modellen.',
+    //     },
+    // },
     {
-        id: 'model-router',
-        name: 'Azure Model Router',
+        id: 'gpt-4.1',
+        name: 'GPT-4.1',
         endpoint: 'azure',
         description: {
-            de: 'Azure Model Router ist ein intelligenter LLM-Router, der Anfragen an das am besten geeignete OpenAI-Modell weiterleitet.',
-            en: 'Azure Model Router is an intelligent LLM router that directs requests to the most suitable OpenAI model.',
-            sv: 'Azure Model Router är en intelligent LLM-router som dirigerar förfrågningar till den mest lämpliga OpenAI-modellen.',
+            de: 'GPT-4.1 ist eine verbesserte Version des GPT-4-Modells, das für eine Vielzahl von Anwendungen in der natürlichen Sprachverarbeitung optimiert wurde.',
+            en: 'GPT-4.1 is an enhanced version of the GPT-4 model, optimized for a variety of natural language processing applications.',
+            sv: 'GPT-4.1 är en förbättrad version av GPT-4-modellen, optimerad för en mängd olika tillämpningar inom naturlig språkbehandling.',
         },
     },
     {
@@ -91,16 +111,16 @@ export const supportedLLMs: LLM[] = [
             sv: 'Llama 4 Maverick 17B Instruct (128E) är en högkapacitets multimodal språkmodell från Meta, byggd på en blandning av experter (MoE) arkitektur med 128 experter och 17 miljarder aktiva parametrar per framåtpass (totalt 400B). Den stöder flerspråkig text- och bildeingång, och producerar flerspråkig text- och kodutgång över 12 stödda språk. Optimerad för vision-språk uppgifter, är Maverick anvisningsoptimerad för assistentliknande beteende, bildresonemang och allmän multimodal interaktion.',
         },
     },
-    {
-        id: 'nvidia/llama-3.1-nemotron-ultra-253b-v1:free',
-        name: 'Llama 3.1 Nemotron Ultra',
-        endpoint: 'openRouter',
-        description: {
-            de: 'Llama-3.1-Nemotron-Ultra-253B-v1 ist ein großes Sprachmodell (LLM), das für fortgeschrittenes Schlussfolgern, interaktive Chats mit Menschen, retrieval-unterstützte Generierung (RAG) und Tool-Aufruf-Aufgaben optimiert ist. Abgeleitet von Meta’s Llama-3.1-405B-Instruct wurde es erheblich mit Neural Architecture Search (NAS) angepasst, was zu verbesserter Effizienz, reduziertem Speicherverbrauch und verbesserter Inferenzlatenz führt. Das Modell unterstützt eine Kontextlänge von bis zu 128K Tokens und kann effizient auf einem 8x NVIDIA H100-Knoten betrieben werden.',
-            en: 'Llama-3.1-Nemotron-Ultra-253B-v1 is a large language model (LLM) optimized for advanced reasoning, human-interactive chat, retrieval-augmented generation (RAG), and tool-calling tasks. Derived from Meta’s Llama-3.1-405B-Instruct, it has been significantly customized using Neural Architecture Search (NAS), resulting in enhanced efficiency, reduced memory usage, and improved inference latency. The model supports a context length of up to 128K tokens and can operate efficiently on an 8x NVIDIA H100 node.',
-            sv: 'Llama-3.1-Nemotron-Ultra-253B-v1 är en stor språkmodell (LLM) optimerad för avancerat resonemang, mänskligt interaktivt chatt, retrieval-förstärkt generering (RAG) och verktygsanropsuppgifter. Härledd från Meta’s Llama-3.1-405B-Instruct har den anpassats avsevärt med Neural Architecture Search (NAS), vilket resulterar i förbättrad effektivitet, minskat minnesanvändning och förbättrad inferenslatens. Modellen stöder en kontextlängd på upp till 128K tokens och kan fungera effektivt på en 8x NVIDIA H100-nod.',
-        },
-    },
+    // {
+    //     id: 'nvidia/llama-3.1-nemotron-ultra-253b-v1:free',
+    //     name: 'Llama 3.1 Nemotron Ultra',
+    //     endpoint: 'openRouter',
+    //     description: {
+    //         de: 'Llama-3.1-Nemotron-Ultra-253B-v1 ist ein großes Sprachmodell (LLM), das für fortgeschrittenes Schlussfolgern, interaktive Chats mit Menschen, retrieval-unterstützte Generierung (RAG) und Tool-Aufruf-Aufgaben optimiert ist. Abgeleitet von Meta’s Llama-3.1-405B-Instruct wurde es erheblich mit Neural Architecture Search (NAS) angepasst, was zu verbesserter Effizienz, reduziertem Speicherverbrauch und verbesserter Inferenzlatenz führt. Das Modell unterstützt eine Kontextlänge von bis zu 128K Tokens und kann effizient auf einem 8x NVIDIA H100-Knoten betrieben werden.',
+    //         en: 'Llama-3.1-Nemotron-Ultra-253B-v1 is a large language model (LLM) optimized for advanced reasoning, human-interactive chat, retrieval-augmented generation (RAG), and tool-calling tasks. Derived from Meta’s Llama-3.1-405B-Instruct, it has been significantly customized using Neural Architecture Search (NAS), resulting in enhanced efficiency, reduced memory usage, and improved inference latency. The model supports a context length of up to 128K tokens and can operate efficiently on an 8x NVIDIA H100 node.',
+    //         sv: 'Llama-3.1-Nemotron-Ultra-253B-v1 är en stor språkmodell (LLM) optimerad för avancerat resonemang, mänskligt interaktivt chatt, retrieval-förstärkt generering (RAG) och verktygsanropsuppgifter. Härledd från Meta’s Llama-3.1-405B-Instruct har den anpassats avsevärt med Neural Architecture Search (NAS), vilket resulterar i förbättrad effektivitet, minskat minnesanvändning och förbättrad inferenslatens. Modellen stöder en kontextlängd på upp till 128K tokens och kan fungera effektivt på en 8x NVIDIA H100-nod.',
+    //     },
+    // },
     {
         id: 'microsoft/phi-4-reasoning-plus:free',
         name: 'Phi-4 Reasoning Plus',
@@ -115,7 +135,7 @@ export const supportedLLMs: LLM[] = [
 
 export const implementedGenerators: GeneratorPipeline[] = [
     {
-        id: 'persona-generator#0',
+        id: 'persona-generator#zero',
         name: {
             de: 'Persona Generator (0-Shot)',
             en: 'Persona Generator (0-Shot)',
@@ -128,7 +148,20 @@ export const implementedGenerators: GeneratorPipeline[] = [
         },
     },
     {
-        id: 'persona-generator#1',
+        id: 'persona-generator#zeroPlusVocab',
+        name: {
+            de: 'Persona Generator (0-Shot + Vokabular)',
+            en: 'Persona Generator (0-Shot + Vocabulary)',
+            sv: 'Persona Generator (0-Shot + Ordförråd)',
+        },
+        description: {
+            de: 'Der Persona Generator, welcher den Knowledge Graph auf Basis von Personas generiert. Dem LLM wird die Rolle eines Experten zugewiesen, um die Ergebnisse zu verbessern. Zusätzlich wird ein Vokabular bereitgestellt, um die Genauigkeit der Ergebnisse zu erhöhen.',
+            en: 'The Persona Generator, which generates the knowledge graph based on personas. The LLM is assigned the role of an expert to improve the results. Additionally, a vocabulary is provided to enhance the accuracy of the results.',
+            sv: 'Persona Generator, som genererar kunskapsgrafen baserat på personas. LLM tilldelas rollen som expert för att förbättra resultaten. Dessutom tillhandahålls ett ordförråd för att öka noggrannheten i resultaten.',
+        },
+    },
+    {
+        id: 'persona-generator#one',
         name: {
             de: 'Persona Generator (1-Shot)',
             en: 'Persona Generator (1-Shot)',
@@ -141,16 +174,120 @@ export const implementedGenerators: GeneratorPipeline[] = [
         },
     },
     {
-        id: 'iterative-generator',
+        id: 'persona-generator#onePlusVocab',
         name: {
-            de: 'Iterativer Generator',
-            en: 'Iterative Generator',
-            sv: 'Iterativ Generator',
+            de: 'Persona Generator (1-Shot + Vokabular)',
+            en: 'Persona Generator (1-Shot + Vocabulary)',
+            sv: 'Persona Generator (1-Shot + Ordförråd)',
+        },
+        description: {
+            de: 'Der Persona Generator, welcher den Knowledge Graph auf Basis von Personas generiert. Dem LLM wird die Rolle eines Experten zugewiesen, um die Ergebnisse zu verbessern. Zusätzlich wird ein Vokabular bereitgestellt, um die Genauigkeit der Ergebnisse zu erhöhen.',
+            en: 'The Persona Generator, which generates the knowledge graph based on personas. The LLM is assigned the role of an expert to improve the results. Additionally, a vocabulary is provided to enhance the accuracy of the results.',
+            sv: 'Persona Generator, som genererar kunskapsgrafen baserat på personas. LLM tilldelas rollen som expert för att förbättra resultaten. Dessutom tillhandahålls ett ordförråd för att öka noggrannheten i resultaten.',
+        },
+    },
+    {
+        id: 'base-generator#zero',
+        name: {
+            en: 'Base Generator (0-Shot)',
+            de: 'Basis Generator (0-Shot)',
+            sv: 'Bas Generator (0-Shot)',
+        },
+        description: {
+            en: 'The Base Generator, which builds the knowledge graph based on the raw text input without any additional context or personas.',
+            de: 'Der Basis Generator, welcher den Knowledge Graph auf Basis des Rohtextes ohne zusätzliche Kontexte oder Personas generiert.',
+            sv: 'Bas Generator, som bygger kunskapsgrafen baserat på råtext utan ytterligare kontext eller personas.',
+        },
+    },
+    {
+        id: 'base-generator#zeroPlusVocab',
+        name: {
+            en: 'Base Generator (0-Shot + Vocabulary)',
+            de: 'Basis Generator (0-Shot + Vokabular)',
+            sv: 'Bas Generator (0-Shot + Ordförråd)',
+        },
+        description: {
+            en: 'The Base Generator, which builds the knowledge graph based on the raw text input without any additional context or personas. Additionally, a vocabulary is provided to enhance the accuracy of the results.',
+            de: 'Der Basis Generator, welcher den Knowledge Graph auf Basis des Rohtextes ohne zusätzliche Kontexte oder Personas generiert. Zusätzlich wird ein Vokabular bereitgestellt, um die Genauigkeit der Ergebnisse zu erhöhen.',
+            sv: 'Bas Generator, som bygger kunskapsgrafen baserat på råtext utan ytterligare kontext eller personas. Dessutom tillhandahålls ett ordförråd för att öka noggrannheten i resultaten.',
+        },
+    },
+    {
+        id: 'base-generator#one',
+        name: {
+            en: 'Base Generator (1-Shot)',
+            de: 'Basis Generator (1-Shot)',
+            sv: 'Bas Generator (1-Shot)',
+        },
+        description: {
+            en: 'The Base Generator, which builds the knowledge graph based on the raw text input without any additional context or personas.',
+            de: 'Der Basis Generator, welcher den Knowledge Graph auf Basis des Rohtextes ohne zusätzliche Kontexte oder Personas generiert.',
+            sv: 'Bas Generator, som bygger kunskapsgrafen baserat på råtext utan ytterligare kontext eller personas.',
+        },
+    },
+    {
+        id: 'base-generator#onePlusVocab',
+        name: {
+            en: 'Base Generator (1-Shot + Vocabulary)',
+            de: 'Basis Generator (1-Shot + Vokabular)',
+            sv: 'Bas Generator (1-Shot + Ordförråd)',
+        },
+        description: {
+            en: 'The Base Generator, which builds the knowledge graph based on the raw text input without any additional context or personas. Additionally, a vocabulary is provided to enhance the accuracy of the results.',
+            de: 'Der Basis Generator, welcher den Knowledge Graph auf Basis des Rohtextes ohne zusätzliche Kontexte oder Personas generiert. Zusätzlich wird ein Vokabular bereitgestellt, um die Genauigkeit der Ergebnisse zu erhöhen.',
+            sv: 'Bas Generator, som bygger kunskapsgrafen baserat på råtext utan ytterligare kontext eller personas. Dessutom tillhandahålls ett ordförråd för att öka noggrannheten i resultaten.',
+        },
+    },
+    {
+        id: 'iterative-generator#zero',
+        name: {
+            de: 'Iterativer Generator (0-Shot)',
+            en: 'Iterative Generator (0-Shot)',
+            sv: 'Iterativ Generator (0-Shot)',
         },
         description: {
             de: 'Der Iterative Generator, welcher den Knowledge Graph iterativ über mehrere Anfragen an das LLM aufbaut.',
             en: 'The Iterative Generator, which builds the knowledge graph iteratively through multiple requests to the LLM.',
             sv: 'Den Iterativa Generatorn, som bygger kunskapsgrafen iterativ genom flera förfrågningar till LLM.',
+        },
+    },
+    {
+        id: 'iterative-generator#one',
+        name: {
+            de: 'Iterativer Generator (1-Shot)',
+            en: 'Iterative Generator (1-Shot)',
+            sv: 'Iterativ Generator (1-Shot)',
+        },
+        description: {
+            de: 'Der Iterative Generator, welcher den Knowledge Graph iterativ über mehrere Anfragen an das LLM aufbaut.',
+            en: 'The Iterative Generator, which builds the knowledge graph iteratively through multiple requests to the LLM.',
+            sv: 'Den Iterativa Generatorn, som bygger kunskapsgrafen iterativ genom flera förfrågningar till LLM.',
+        },
+    },
+    {
+        id: 'iterative-generator#zeroPlusVocab',
+        name: {
+            de: 'Iterativer Generator (0-Shot + Vocabulary)',
+            en: 'Iterative Generator (0-Shot + Vocabulary)',
+            sv: 'Iterativ Generator (0-Shot + Ordförråd)',
+        },
+        description: {
+            de: 'Der Iterative Generator, welcher den Knowledge Graph iterativ über mehrere Anfragen an das LLM aufbaut. Zusätzlich wird ein Vokabular bereitgestellt, um die Genauigkeit der Ergebnisse zu erhöhen.',
+            en: 'The Iterative Generator, which builds the knowledge graph iteratively through multiple requests to the LLM. Additionally, a vocabulary is provided to enhance the accuracy of the results.',
+            sv: 'Den Iterativa Generatorn, som bygger kunskapsgrafen iterativ genom flera förfrågningar till LLM. Dessutom tillhandahålls ett ordförråd för att öka noggrannheten i resultaten.',
+        },
+    },
+    {
+        id: 'iterative-generator#onePlusVocab',
+        name: {
+            de: 'Iterativer Generator (1-Shot + Vocabulary)',
+            en: 'Iterative Generator (1-Shot + Vocabulary)',
+            sv: 'Iterativ Generator (1-Shot + Ordförråd)',
+        },
+        description: {
+            de: 'Der Iterative Generator, welcher den Knowledge Graph iterativ über mehrere Anfragen an das LLM aufbaut. Zusätzlich wird ein Vokabular bereitgestellt, um die Genauigkeit der Ergebnisse zu erhöhen.',
+            en: 'The Iterative Generator, which builds the knowledge graph iteratively through multiple requests to the LLM. Additionally, a vocabulary is provided to enhance the accuracy of the results.',
+            sv: 'Den Iterativa Generatorn, som bygger kunskapsgrafen iterativ genom flera förfrågningar till LLM. Dessutom tillhandahålls ett ordförråd för att öka noggrannheten i resultaten.',
         },
     },
 ];
