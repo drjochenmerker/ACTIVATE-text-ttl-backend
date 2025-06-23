@@ -13,7 +13,6 @@ export function setupSocketIO(server: HTTPServer) {
 
     io.on('connection', (socket) => {
         console.log('Client connected:', socket.id);
-        // Optional: Events für einzelne Clients
     });
 }
 

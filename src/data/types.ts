@@ -24,7 +24,8 @@ export type GeneratorPipeline = {
 // Prompt Shot Type
 export enum PromptShot {
     zero,
+    zeroPlusVocab,
     one,
+    onePlusVocab,
     few,
-    many
 }

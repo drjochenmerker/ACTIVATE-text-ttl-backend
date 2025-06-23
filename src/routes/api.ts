@@ -9,14 +9,8 @@ import { implementedGenerators, supportedLLMs } from '../data/resources';
 /**
  * @swagger
  * tags:
- *   - name: Gemini
- *     description: Endpoints for Gemini
- *   - name: Azure
- *     description: Endpoints for Azure
- *   - name: Ollama
- *     description: Endpoints for Ollama
- *   - name: OpenRouter
- *     description: Endpoints for OpenRouter
+ *   - name: Generator
+ *     description: Endpoints for the generator service
  *   - name: List
  *     description: Endpoints for general management
  */

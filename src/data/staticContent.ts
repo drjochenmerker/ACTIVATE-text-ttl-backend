@@ -30,6 +30,56 @@ export const errorMessages = {
     },
 }
 
+export const progressMessages = {
+    start: {
+        en: 'LLM generating TTL ...',
+        de: 'LLM generiert TTL ...',
+        sv: 'LLM genererar TTL ...'
+    },
+    validate: {
+        en: 'Fixing Syntax ...',
+        de: 'Syntax wird korrigiert ...',
+        sv: 'Korrigerar syntax ...'
+    },
+    edit: {
+        en: 'Editing generated TTL ...',
+        de: 'Bearbeite generierte TTL ...',
+        sv: 'Redigerar genererad TTL ...'
+    },
+    iterative: {
+        setting: {
+            en: 'Generating Setting ...',
+            de: 'Generiere Setting ...',
+            sv: 'Genererar inställning ...'
+        },
+        entity: {
+            en: 'Generating Entities ...',
+            de: 'Generiere Entitäten ...',
+            sv: 'Genererar entiteter ...'
+        },
+        properties: {
+            en: 'Generating Properties ...',
+            de: 'Generiere Eigenschaften ...',
+            sv: 'Genererar egenskaper ...'
+        },
+        relations: {
+            en: 'Generating Relations ...',
+            de: 'Generiere Beziehungen ...',
+            sv: 'Genererar relationer ...'
+        },
+        tensions: {
+            en: 'Generating Tensions ...',
+            de: 'Generiere Spannungen ...',
+            sv: 'Genererar spänningar ...'
+        },
+        merging: {
+            en: 'Merging generated Turtle Syntax ...',
+            de: 'Zusammenführen der generierten Turtle-Syntax ...',
+            sv: 'Slår samman genererad Turtle-syntax ...'
+        }
+    }
+}
+
 export const logFilenames = {
     misc: 'misc',
     start: 'generator-start',
