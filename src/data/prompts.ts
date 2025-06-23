@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-vars*/
+
 import { vocab } from "./vocab";
 
 const rawBasePrompt = `

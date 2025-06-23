@@ -1,7 +1,6 @@
 // src/routes/generator.ts
 import { Router } from 'express';
 import { supportedLLMs } from '../data/resources.js';
-import { requestPersonaGen } from '../services/generator/personaGen.js';
 import { errorMessages, logFilenames, progressMessages } from '../data/staticContent.js';
 import { parseLLMOutput, writeToLog } from '../services/utils.js';
 import { validate } from '../services/validator.js';
@@ -130,19 +129,22 @@ router.post('/start', async (req, res) => {
         let generatedTTL: string = '';
         let systemPrompt: string = '';
         switch ((generatorId as string).split('#')[0]) {
-            case 'persona-generator':
+            case 'persona-generator': {
                 writeToLog(logFilenames.start, "Starting " + generatorId + " Generator with LLM: " + llm.id, '');
                 io.emit('generator-progress', { progress: 1 / 2, message: progressMessages.start });
                 systemPrompt = personaSystemPrompt[generatorId.split('#')[1] as keyof typeof personaSystemPrompt];
                 generatedTTL = await requestKgGen(llm, systemPrompt, activityText, logFilenames.start);
                 break;
-            case 'base-generator':
+            }
+            case 'base-generator': {
                 writeToLog(logFilenames.start, "Starting Base Generator with LLM: " + llm.id, '');
                 io.emit('generator-progress', { progress: 1 / 2, message: progressMessages.start });
                 systemPrompt = baseSystemPrompt[generatorId.split('#')[1] as keyof typeof baseSystemPrompt];
                 generatedTTL = await requestKgGen(llm, systemPrompt, activityText, logFilenames.start);
                 break;
-            case 'iterative-generator':
+            }
+            case 'iterative-generator': {
+
                 const shot = generatorId.split('#')[1] as keyof typeof iterativeSystemPrompts;
                 let generatedTTLObject = {
                     setting: '',
@@ -196,7 +198,7 @@ router.post('/start', async (req, res) => {
                 writeToLog(logFilenames.start, "Relations Generated: " + generatedTTLObject.entities, '');
 
                 io.emit('generator-progress', { progress: 5 / 7, message: progressMessages.iterative.tensions });
-                result = await requestKgGen(llm, iterativeSystemPrompts[shot][4], `Text: ${activityText}\Data: ${generatedTTLObject.entities}`, logFilenames.start);
+                result = await requestKgGen(llm, iterativeSystemPrompts[shot][4], `Text: ${activityText}\nData: ${generatedTTLObject.entities}`, logFilenames.start);
                 if (result === 'error' || result.length === 0) {
                     res.status(200).json({
                         error: errorMessages.generationFailed,
@@ -217,11 +219,13 @@ router.post('/start', async (req, res) => {
                 generatedTTL = result
                 writeToLog(logFilenames.start, "Merged TTL Generated: " + generatedTTL, '');
                 break;
-            default:
+            }
+            default: {
                 res.status(200).json({
                     error: errorMessages.unsupportedGenerator,
                 });
                 return;
+            }
         }
         // Check for failed generation
         if (generatedTTL === 'error' || generatedTTL.length === 0) {
