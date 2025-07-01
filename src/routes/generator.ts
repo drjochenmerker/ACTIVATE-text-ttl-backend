@@ -162,7 +162,7 @@ router.post('/start', async (req, res) => {
                     return;
                 }
                 generatedTTLObject.setting = result;
-                writeToLog(logFilenames.start, "Setting Generated: " + generatedTTLObject.setting, '');
+                // writeToLog(logFilenames.start, "Setting Generated: " + generatedTTLObject.setting, '');
 
                 io.emit('generator-progress', { progress: 2 / 7, message: progressMessages.iterative.entity });
                 result = await requestKgGen(llm, iterativeSystemPrompts[shot][1], activityText, logFilenames.start);
@@ -173,7 +173,7 @@ router.post('/start', async (req, res) => {
                     return;
                 }
                 generatedTTLObject.entities = result
-                writeToLog(logFilenames.start, "Entities Generated: " + generatedTTLObject.entities, '');
+                // writeToLog(logFilenames.start, "Entities Generated: " + generatedTTLObject.entities, '');
 
                 io.emit('generator-progress', { progress: 3 / 7, message: progressMessages.iterative.properties });
                 result = await requestKgGen(llm, iterativeSystemPrompts[shot][2], `Text: ${activityText}\nEntities: ${generatedTTLObject.entities}`, logFilenames.start);
@@ -184,7 +184,7 @@ router.post('/start', async (req, res) => {
                     return;
                 }
                 generatedTTLObject.entities = result
-                writeToLog(logFilenames.start, "Properties Generated: " + generatedTTLObject.entities, '');
+                // writeToLog(logFilenames.start, "Properties Generated: " + generatedTTLObject.entities, '');
 
                 io.emit('generator-progress', { progress: 4 / 7, message: progressMessages.iterative.relations });
                 result = await requestKgGen(llm, iterativeSystemPrompts[shot][3], `Text: ${activityText}\nEntities: ${generatedTTLObject.entities}`, logFilenames.start);
@@ -195,7 +195,7 @@ router.post('/start', async (req, res) => {
                     return;
                 }
                 generatedTTLObject.entities = result
-                writeToLog(logFilenames.start, "Relations Generated: " + generatedTTLObject.entities, '');
+                // writeToLog(logFilenames.start, "Relations Generated: " + generatedTTLObject.entities, '');
 
                 io.emit('generator-progress', { progress: 5 / 7, message: progressMessages.iterative.tensions });
                 result = await requestKgGen(llm, iterativeSystemPrompts[shot][4], `Text: ${activityText}\nData: ${generatedTTLObject.entities}`, logFilenames.start);
@@ -217,7 +217,7 @@ router.post('/start', async (req, res) => {
                     return;
                 }
                 generatedTTL = result
-                writeToLog(logFilenames.start, "Merged TTL Generated: " + generatedTTL, '');
+                // writeToLog(logFilenames.start, "Merged TTL Generated: " + generatedTTL, '');
                 break;
             }
             default: {
@@ -253,7 +253,14 @@ router.post('/start', async (req, res) => {
             writeToLog(logFilenames.start, "Validator Call #" + validateCount, validatorResult)
             if (validatorResult.errors.length > 0) {
                 io.emit('generator-progress', { progress: 90, message: progressMessages.validate });
-                generatedTTL = parseLLMOutput(await queryGemini(validatorLLM, ttlSyntaxFixPrompt, generatedTTL + '\n' + JSON.stringify(validatorResult.errors), logFilenames.start));
+                const fixedTTL = parseLLMOutput(await queryGemini(validatorLLM, ttlSyntaxFixPrompt, generatedTTL + '\n' + JSON.stringify(validatorResult.errors), logFilenames.start));
+                if (fixedTTL === 'error' || fixedTTL.length === 0) {
+                    res.status(200).json({
+                        error: errorMessages.generationFailed,
+                    });
+                    return;
+                }
+                generatedTTL = fixedTTL;
             } else {
                 validated = true;
             }

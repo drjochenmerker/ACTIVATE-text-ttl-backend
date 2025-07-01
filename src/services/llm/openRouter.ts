@@ -29,9 +29,11 @@ export async function queryOpenRouter(model: string, systemPrompt: string, userP
                     content: userPrompt,
                 },
             ],
+            temperature: 0.2,
         });
-        writeToLog(logFilename, "OpenRouter Request: " + model, response)
-        return response.choices[0].message.content || 'error';
+        writeToLog(logFilename, "OpenRouter Request: " + model, '')
+        console.log(response)
+        return response.choices![0].message.content || 'error';
     } catch (error) {
         console.error('Error querying OpenRouter:', error);
         return "error"
