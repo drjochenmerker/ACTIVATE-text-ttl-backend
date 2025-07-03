@@ -4,7 +4,8 @@
  * @returns parsed message
  */
 export function parseLLMOutput(message: string): string {
-    const parsedMessage = message.replace(/```(?:ttl)?/gi, '')
+    const parsedMessage = message
+        .replace(/(```(?:ttl)?|''')/gi, '')
         .replace(/^\s*turtle:?/i, '')
         .trim();
     return parsedMessage;
