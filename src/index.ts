@@ -35,10 +35,10 @@ app.use(
     })
 );
 
-// Rate Limiter -- 15 Minutes, 100 requests
+// Rate Limiter -- 1 Minute, 100 requests
 app.use(
     rateLimit({
-        windowMs: 15 * 60 * 1000,
+        windowMs: 1 * 60 * 1000,
         limit: 100,
         standardHeaders: 'draft-8',
         legacyHeaders: false,

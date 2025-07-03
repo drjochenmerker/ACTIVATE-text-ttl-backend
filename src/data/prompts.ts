@@ -3412,3 +3412,359 @@ const template = `
             owl:NamedIndividual ;
         rdfs:label "Medical Practitioners/Generalist"@en .
 `
+
+export const settingGenerationPrompt = `
+    Given a description of a medical simulation, you will extract a fitting name and a description for the given setting. 
+    Output the results in Turtle Syntax, generating Labels in German, English and Swedish. Refer to the following
+    template for the output that you can expand upon:
+    
+    '''turtle
+    @prefix : <http://activate.htwk-leipzig.de/model#> .
+    @prefix owl: <http://www.w3.org/2002/07/owl#> .
+    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+    :UniqueIdentifier a owl:NamedIndividual ;
+    :ActivityDescription "description"@en ;
+    # Other language decriptions
+    :ActivityName "name"@en .
+    # Other language names
+
+    :Instructor a :Subject,
+        owl:NamedIndividual ;
+    rdfs:label "Instructor"@en ;
+    # Other language labels
+    '''
+
+    Output only the requested Turtle Syntax, without any additional text or explanations.
+`
+
+export const feedbackSystemPrompts = [
+    // Entity Extraction Prompt
+    `
+        Given a description of a medical simulation and thoughts written down by a participant of the simulation (including their role within), you will extract all entities mentioned in the notes and assign them one
+        or multiple of the following classes according to their context in the given situation:
+        ${classExplanation2}
+
+        The input will be structured as follows:
+        Setting: "Description of the medical simulation"
+        Feedback: "Thoughts written down by the participant"
+
+        The output will be structured as follows:
+        Setting: "Description of the medical simulation"
+        Author Role: "Role of the participant"
+        Notes: "Thoughts written down by the audience"
+        
+        Output the entities in Turtle Syntax, generating Labels in German, English and Swedish for each entitiy, structured as follows:
+        '''turtle
+        @prefix : <http://activate.htwk-leipzig.de/model#> .
+        @prefix owl: <http://www.w3.org/2002/07/owl#> .
+        @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+        @base <http://activate.htwk-leipzig.de/model> .
+        
+        :UniqueIdentifier a :EntityClass,
+        owl:NamedIndividual ;
+        rdfs:label "Other Healthcare Professionals/Care Staff"@en .
+        # Other language labels
+        '''
+
+        Output only the requested format, without any additional text or explanations.
+    `,
+    // Relation Extraction Prompt
+    `
+        Given a description of a medical simulation, thoughts written down by a participant of the simulation (including their role within) and a list of entities, you will extract the relations present between the entities.
+        The input will be structured as follows:
+
+        Setting: "Description of the medical simulation"
+        Author Role: "Role of the participant"
+        Notes: "Thoughts written down by the audience"
+        Entities: '''turtle
+        @prefix : <http://activate.htwk-leipzig.de/model#> .
+        @prefix owl: <http://www.w3.org/2002/07/owl#> .
+        @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+        @base <http://activate.htwk-leipzig.de/model> .
+        
+        :UniqueIdentifier a :EntityClass,
+        owl:NamedIndividual ;
+        rdfs:label "Other Healthcare Professionals/Care Staff"@en .
+        # Other language labels
+        '''
+
+        Output the relations in Turtle Syntax, generating Labels in German, English and Swedish for each relation by extending the given entities with the used
+        relations. You should use the following vocabulary if possible, only deriving if relations cannot be respresented otherwise.
+        Used Vocabulary must not be included in the output. Make sure to respect the domain and range of the relations:
+
+        Vocabulary:
+        '''turtle
+        @prefix : <http://activate.htwk-leipzig.de/model#> .
+        @prefix owl: <http://www.w3.org/2002/07/owl#> .
+        @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+        @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+        @base <http://activate.htwk-leipzig.de/model> .
+
+        :CausedByViolationOf rdf:type owl:ObjectProperty ;
+                            rdfs:domain :Conflict ;
+                            rdfs:range :Rule ;
+                            rdfs:label "Caused by a violation of"@en ,
+                                        "Orsakas av överträdelse av"@sv ,
+                                        "Verursacht durch Verletzung von"@de .
+
+        :CreatesAndIsRegulatedBy rdf:type owl:ObjectProperty ;
+                                rdfs:domain :Community ;
+                                rdfs:range :Rule ;
+                                rdfs:label "Creates and is regulated by"@en ,
+                                            "Erstellt und wird gereglt durch"@de ,
+                                            "Skapar och regleras av"@sv .
+
+        :DefinesRoleOf rdf:type owl:ObjectProperty ;
+                    rdfs:domain :DivisionOfLabour ;
+                    rdfs:range :Subject ;
+                    rdfs:label "Defines role of"@en ,
+                                "Definierar rollen av"@sv ,
+                                "Definiert die Rolle von"@de .
+
+        :DefinesTheApproachOf rdf:type owl:ObjectProperty ;
+                            rdfs:domain :Object ;
+                            rdfs:range :Subject ;
+                            rdfs:label "Defines the approach of"@en ,
+                                        "Definierar tillvägagångssättet för"@sv ,
+                                        "Definiert den Ansatz von"@de .
+
+        :Determines rdf:type owl:ObjectProperty ;
+                    rdfs:domain :Object ;
+                    rdfs:range :DivisionOfLabour ;
+                    rdfs:label "Bestimmt"@de ,
+                            "Bestämmer"@sv ,
+                            "Determines"@en .
+
+        :DevelopsAndUses rdf:type owl:ObjectProperty ;
+                        rdfs:domain :Community ;
+                        rdfs:range :Instrument ;
+                        rdfs:label "Develops and uses"@en ,
+                                    "Entwickelt und benutzt"@de ,
+                                    "Utvecklar och använder"@sv .
+                    
+        :HasToFollow rdf:type owl:ObjectProperty ;
+                    rdfs:domain :Subject ;
+                    rdfs:range :Rule ;
+                    rdfs:label "Has to follow"@en ,
+                                "Muss folgen"@de ,
+                                "Måste följa"@sv .
+
+        :Influences rdf:type owl:ObjectProperty ;
+                    rdfs:domain :Rule ;
+                    rdfs:range :Object ;
+                    rdfs:label "Beeinflusst"@de ,
+                            "Influences"@en ,
+                            "Påverkar"@sv .
+
+        :InfluencesTheChoiceof rdf:type owl:ObjectProperty ;
+                            rdfs:domain :Object ;
+                            rdfs:range :Instrument ;
+                            rdfs:label "Beeinflusst die Wahl von"@de ,
+                                        "Influences the choice of"@en ,
+                                        "Påverkar valet av"@sv .
+
+        :InteractsIn rdf:type owl:ObjectProperty ;
+                    rdfs:domain :Subject ;
+                    rdfs:range :Community ;
+                    rdfs:label "Interacts in"@en ,
+                                "Interagerar i"@sv ,
+                                "Interagiert in"@de .
+
+        :InteractsWith rdf:type owl:ObjectProperty ;
+                    rdfs:domain :Community ;
+                    rdfs:range :Subject ;
+                    rdfs:label "Interacts with"@en ,
+                                "Interagerar med"@sv ,
+                                "Interagiert mit"@de .
+
+        :IsAppliedToAchieve rdf:type owl:ObjectProperty ;
+                            rdfs:domain :DivisionOfLabour ;
+                            rdfs:range :Object ;
+                            rdfs:label "Används för att uppnå"@sv ,
+                                    "Is applied to achieve"@en ,
+                                    "Wird angewandt zum Erreichen von"@de .
+
+        :IsDefinedBy rdf:type owl:ObjectProperty ;
+                    rdfs:domain :Subject ;
+                    rdfs:range :DivisionOfLabour ;
+                    rdfs:label "Is defined by"@en ,
+                                "Ist definiert durch"@de ,
+                                "Är definierad av"@sv .
+
+        :IsDevelopedAndUsedBy rdf:type owl:ObjectProperty ;
+                            rdfs:domain :Instrument ;
+                            rdfs:range :Community ;
+                            rdfs:label "Is developed and used by"@en ,
+                                        "Utvecklas och används av"@sv ,
+                                        "Wird entwickelt und genutzt von"@de .
+
+        :IsInfluencedBy rdf:type owl:ObjectProperty ;
+                        rdfs:domain :Object ;
+                        rdfs:range :Rule ;
+                        rdfs:label "Is influenced by"@en ,
+                                "Påverkas av"@sv ,
+                                "Wird beeinflusst von"@de .
+
+        :IsOrganisedBy rdf:type owl:ObjectProperty ;
+                    rdfs:domain :Community ;
+                    rdfs:range :DivisionOfLabour ;
+                    rdfs:label "Is organised by"@en ,
+                                "Ist organisiert durch"@de ,
+                                "Är organiserad av"@sv .
+
+        :IsUsedBy rdf:type owl:ObjectProperty ;
+                rdfs:domain :Instrument ;
+                rdfs:range :Subject ;
+                rdfs:label "Används av"@sv ,
+                            "Is used by"@en ,
+                            "Wird benutzt von"@de .
+
+        :IsUsedOn rdf:type owl:ObjectProperty ;
+                rdfs:domain :Instrument ;
+                rdfs:range :Object ;
+                rdfs:label "Används på"@sv ,
+                            "Is used on"@en ,
+                            "Wird angewandt auf"@de .
+
+        :OperatesOn rdf:type owl:ObjectProperty ;
+                    rdfs:domain :Subject ;
+                    rdfs:range :Object ;
+                    rdfs:label "Fungerar på"@sv ,
+                            "Operates on"@en ,
+                            "Operiert auf"@de .
+
+        :Organises rdf:type owl:ObjectProperty ;
+                rdfs:domain :DivisionOfLabour ;
+                rdfs:range :Community ;
+                rdfs:label "Organiserar"@sv ,
+                            "Organises"@en ,
+                            "Organisiert"@de .
+
+        :RegulatesActionOf rdf:type owl:ObjectProperty ;
+                        rdfs:domain :Rule ;
+                        rdfs:range :Subject ;
+                        rdfs:label "Reglerar handlingen av"@sv ,
+                                    "Regulates action of"@en ,
+                                    "Reguliert die Handlung von"@de .
+
+        :RegulatesAndIsCreatedBy rdf:type owl:ObjectProperty ;
+                                rdfs:domain :Rule ;
+                                rdfs:range :Community ;
+                                rdfs:label "Reglerar och skapas av"@sv ,
+                                            "Regulates and is created by"@en ,
+                                            "Reguliert und wird erstellt von"@de .
+
+        :ShallBeAchievedBy rdf:type owl:ObjectProperty ;
+                        rdfs:domain :Object ;
+                        rdfs:range :Community ;
+                        rdfs:label "Shall be achieved by"@en ,
+                                    "Skall uppnås genom"@sv ,
+                                    "Soll erreicht werden durch"@de .
+
+        :Shares rdf:type owl:ObjectProperty ;
+                rdfs:domain :Community ;
+                rdfs:range :Object ;
+                rdfs:label "Delar"@sv ,
+                        "Shares"@en ,
+                        "Teilt"@de .
+
+        :Uses rdf:type owl:ObjectProperty ;
+            rdfs:domain :Subject ;
+            rdfs:range :Instrument ;
+            rdfs:label "Använder"@sv ,
+                        "Benutzt"@de ,
+                        "Uses"@en .
+        '''
+
+        The output must be structured as follows:
+
+        '''turtle
+        @prefix : <http://activate.htwk-leipzig.de/model#> .
+        @prefix owl: <http://www.w3.org/2002/07/owl#> .
+        @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+        @base <http://activate.htwk-leipzig.de/model> .
+
+        :RelationID rdf:type owl:ObjectProperty ;
+        rdfs:domain :ClassOfSourceEntity ;
+        rdfs:range :ClassOfTargetEntity ;
+        rdfs:label "Relation label"@en .
+        # Other language labels
+
+        # Other relations
+        
+        :UniqueIdentifier a :EntityClass,
+            owl:NamedIndividual ;
+            rdfs:label "EntityLabel"@en ;
+            # Other language labels
+            :UsedRelationID :IDOfRelationTarget .
+            # Other used relations        
+        '''
+
+        Output only the requested format, without any additional text or explanations.                            
+    `,
+    // Tension Extraction Prompt
+    `
+        Given a description of a medical simulation and thoughts written down by a participant of the simulation (including their role within), you will extract all important conflicts, feedbacks and (self)impressions between/of the entities
+        and write transform them to Turtle Syntax.
+
+        The extracted conflicts, feedbacks and impressions must be assigned a unique identifier, the class "Conflict", a title ("ConflictTitle"),
+        a description ("ConflictDescription"), the state ("ConflictState") "open" and an author ("WrittenBy") who must be one of the
+        given entities that initiated the conflict/feedback/impression.
+        If entities are involved in a conflict/feedback/impression, they must be linked
+        with the relation "HasParticipant" with the conflict/feedback/impression as the source entity. A conflict/feedback/impression must not have paricipants from
+        more than three classes. If the participants belong to exactly three classes, the classes may only be from one of the following 
+        combinations: (Subject,Instrument, Object), (Subject, Rule, Community), (Object, Community, DivisionOfLabour) or (Subject, Object, Community). Other
+        combinations of three classes are not allowed! Make sure to never break this rule. 
+        If the participants belong to just one or two classes, the classes may be chosen freely.   
+
+        If other entities respond to a conflict/feedback/impression, they must be linked by creating a new entity of the "Comment" class and linked
+        to the conflict/feedback/impression with the relation "HasComment". The comment must have a unique identifier a description which must not be a direct quote
+        ("CommentDescription") and an author ("WrittenBy") who must be one of the entities that responded to the conflict/feedback/impression.
+        The comments may have further comments which must also be linked in the same way using "HasComment".
+
+
+        The input will be structured as follows:
+        Setting: "Description of the medical simulation"
+        Author Role: "Role of the participant"
+        Notes: "Thoughts written down by the audience"
+        
+        Output the conflicts/feedbacks/impressions in the following format, generating Titles and Descriptions in German, English and Swedish for each conflict/feedback/(self)impression:
+
+        '''turtle
+        @prefix : <http://activate.htwk-leipzig.de/model#> .
+        @prefix owl: <http://www.w3.org/2002/07/owl#> .
+        @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+        @base <http://activate.htwk-leipzig.de/model> .
+
+        :ConflictID a :Conflict ;
+        :ConflictTitle "Title"@en ;
+        # Other language titles
+        :ConflictDescription "Description"@en ;
+        # Other language decriptions  
+        :ConflictState "open" ;
+        :WrittenBy :EntityIDs ;
+        :HasParticipant :EntityIDs ;
+        :CreationDate "Timestamp (Example: 2024-06-01T12:30:00Z)" .
+
+        :CommentID a :Comment ;
+        :CommentDescription "Comment"@en ;
+        # Other language comments
+        :WrittenBy :EntityIDs ;
+        :CreationDate "Timestamp (Example: 2024-06-01T12:35:00Z)" .
+
+        :ConflictIDorCommentID :HasComment :CommentID .
+        '''
+        
+        Output only the requested format, without any additional text or explanations. 
+    `,
+]
+
+export const ttlMergePrompt = `
+    Given multiple Turtle Syntax inputs, you will merge them into one Turtle Syntax output. Do not concatenate the inputs, but merge them by
+    combining the triples semantically and ensuring that there are no duplicate triples in the output.
+    
+    ${ttlOnlyInsctruction}
+`

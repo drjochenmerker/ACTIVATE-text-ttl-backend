@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import generatorRouter from './generator';
+import feedbackRouter from './feedback';
 import { implementedGenerators, supportedLLMs } from '../data/resources';
 
 /**
@@ -13,10 +14,13 @@ import { implementedGenerators, supportedLLMs } from '../data/resources';
  *     description: Endpoints for the generator service
  *   - name: List
  *     description: Endpoints for general management
+ *   - name: Feedback
+ *     description: Endpoints for the feedback service
  */
 
 const router = Router();
 router.use('/generator', generatorRouter);
+router.use('/feedback', feedbackRouter);
 
 /**
  * @swagger

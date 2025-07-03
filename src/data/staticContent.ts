@@ -84,4 +84,5 @@ export const logFilenames = {
     misc: 'misc',
     start: 'generator-start',
     edit: 'generator-edit',
+    feedback: 'feedback',
 }
