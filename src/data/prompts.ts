@@ -12,17 +12,17 @@ const classExplanation2 = `
     - "Subject" (Who are the actors in the action? Family physician, Medical specialist, Nurse, Social worker, Carers etc. 
     What perceptions, ideas and emotions are present in the actors? Uncertainty, Discomfort, Incompetence etc.),
 
-    - "Object" (What is the goal of the action? Cure, Care, adressing psychosocial issues etc. On whom or what is this action taken?
+    - "Object" (What is the goal of the action? Cure, Care, addressing psychosocial issues etc. On whom or what is this action taken?
     Patient, Relative, Blood sample etc. What action must be taken? Needs assessment, Reporting, Decisionmaking etc.),
 
     - "Instrument" (What physical means are used in the action? Patient record, Chart, Medical device, Telephone etc.
     Which abstract resources are deployed in the action? Conviction, Proactivity, Instruction etc.),
 
-    - "Rule" (Which specific policies and rules are linked to the activity? Guidelines, Authorisation, Reimbursements, Co-location etc.
+    - "Rule" (Which specific policies and rules are linked to the activity? Guidelines, Authorization, Reimbursements, Co-location etc.
     What implicit mores and conventions are linked to the activity? Priority, Career track, Professional jargon etc.),
 
-    - "Community" (Where does the activity take place? Home, Nursing home, Hospital etc. What organisation do the actors belong to?
-    General University hospital, Independent Municipal health care practice etc. What conditions characterise this setting?
+    - "Community" (Where does the activity take place? Home, Nursing home, Hospital etc. What organization do the actors belong to?
+    General University hospital, Independent Municipal health care practice etc. What conditions characterize this setting?
     Immediate needs, Distance, Shortage etc.)
 
     - "DivisionOfLabour" (How can different people contribute to the activity? Hierarchy, Role, Leadership, Territorial attitude etc.).
@@ -36,25 +36,25 @@ const rawBasePrompt = `
     ${classExplanation2}
 
     You should also extract all important conflicts, feedbacks and impressions between/of the entities. 
-    The extracted conflicts/feedbacks/impressionss/impressions must be assigned a unique identifier, the class "Conflict", a title ("ConflictTitle"),
+    The extracted conflicts/feedbacks/impressions must be assigned a unique identifier, the class "Conflict", a title ("ConflictTitle"),
     a description ("ConflictDescription"), the state ("ConflictState") "open" and an author ("WrittenBy") who must be one of the
-    given entities that initiated the conflict/feedback/impressions/impressions. If entities are involved in a conflict/feedback/impression, they must be linked
-    with the relation "HasParticipant" with the conflict/feedback/impressions/impressions as the source entity. A conflict/feedback/impressions/impressions must not have paricipants from
+    given entities that initiated the conflict/feedback/impressions. If entities are involved in a conflict/feedback/impression, they must be linked
+    with the relation "HasParticipant" with the conflict/feedback/impressions as the source entity. A conflict/feedback/impressions must not have participants from
     more than three classes. If the participants belong to exactly three classes, the classes may only be from one of the following 
     combinations: (Subject,Instrument, Object), (Subject, Rule, Community), (Object, Community, DivisionOfLabour) or (Subject, Object, Community). Other
     combinations of three classes are not allowed!
     If the participants belong to just one  or two classes, the classes may be chosen freely.   
     
-    If other entities respond to a conflict/feedback/impressions/impressions, they must be represented as a new entity of the "Comment" class and linked
-    from the conflict/feedback/impressions/impressions with the relation "HasComment". The comment must have a unique identifier a description which must not be a direct quote
-    ("CommentDescription") and an author ("WrittenBy") who must be one of the entities that responded to the conflict/feedback/impressions/impressions.
+    If other entities respond to a conflict/feedback/impressions, they must be represented as a new entity of the "Comment" class and linked
+    from the conflict/feedback/impressions with the relation "HasComment". The comment must have a unique identifier a description which must not be a direct quote
+    ("CommentDescription") and an author ("WrittenBy") who must be one of the entities that responded to the conflict/feedback/impressions.
     The comments may have further comments which must also be linked in the same way using "HasComment".
 
     All Descriptions and Titles should be translated into German, English and Swedish.
 
-    The user input itself must also represented as an entitiy by extracting a name and a sunmmarized description, both in German, English and Swedish
+    The user input itself must also represented as an entity by extracting a name and a summarized description, both in German, English and Swedish
     for the general present setting. They must both be represented with the same single unique identifier, the relations "ActivityDescription"
-    and "ActivityName" and fitting Text as the target.
+    and "ActivityName" and fitting text as the target.
 
     Only the following prefixes are allowed in your Turtle Syntax:
     @prefix : <http://activate.htwk-leipzig.de/model#> .
@@ -71,11 +71,11 @@ const personaBasePrompt = `
     ${classExplanation2}
 
     You should also extract all important conflicts, feedbacks and impressions between/of the entities. 
-    The extracted conflicts/feedbacks/impressionss/impressions must be assigned a unique identifier, the class "Conflict", a title ("ConflictTitle"),
+    The extracted conflicts/feedbacks/impressions must be assigned a unique identifier, the class "Conflict", a title ("ConflictTitle"),
     a description ("ConflictDescription"), the state ("ConflictState") "open" and an author ("WrittenBy")
     who must be one of the given entities that initiated the conflict/feedback/impression.
     If entities are involved in a conflict/feedback/impression, they must be linked
-    with the relation "HasParticipant" with the conflict/feedback/impression as the source entity. A conflict/feedback/impression must not have paricipants from
+    with the relation "HasParticipant" with the conflict/feedback/impression as the source entity. A conflict/feedback/impression must not have participants from
     more than three classes. If the participants belong to exactly three classes, the classes may only be from one of the following 
     combinations: (Subject,Instrument, Object), (Subject, Rule, Community), (Object, Community, DivisionOfLabour) or (Subject, Object, Community). Other
     combinations of three classes are not allowed!
@@ -88,7 +88,7 @@ const personaBasePrompt = `
 
         All Descriptions and Titles should be translated into German, English and Swedish.
 
-    The user input itself must also represented as an entitiy by extracting a name and a sunmmarized description, both in German, English and Swedish
+    The user input itself must also represented as an entity by extracting a name and a summarized description, both in German, English and Swedish
     for the general present setting. They must both be represented with the same single unique identifier, the relations "ActivityDescription"
     and "ActivityName" and fitting Text as the target.
 
@@ -101,11 +101,11 @@ const personaBasePrompt = `
 const vocabInstruction = `
     During the generation process, you have access to the following vocabulary. If possible, use the relations from it to describe 
     the interactions in the given text. Only deviate from it if situations present in the text cannot be described with the vocabulary. 
-    Defintitions of used vocabulary must not be included in the final output. 
+    Definitions of used vocabulary must not be included in the final output. 
     Vocabulary: ${vocab}
 `
 
-const ttlOnlyInsctruction = `
+const ttlOnlyInstruction = `
     Make sure to generate a graph that is as complete but also as concise as possible.
     Output only the knowledge graph in Turtle Syntax, without any additional text or explanations.
 `;
@@ -114,7 +114,7 @@ const example_setting_extraction = `
     Here's an example:
     User Input:
     "
-        Homecare nurse: I called this GP and I told him “Doctor, this patient suffers from the vena cava superior syndrome, and I”m not experienced in this'. “Oh but you don”t have to worry about that…' was the answer! He didn't know it either, I guess, otherwise you don't say such a thing. That wasn't helping me at all. And then I'm glad the palliative home care team was there because these people are more knowledgeable and experienced. I was afraid the patient would suffocate, and then what? So I consulted the GP and asked him “What can we do if this happens?” “Well, then you just call me”, he said. But you know, if something like this is happening, you don't have time to make phone calls, you know, you need to be able to do something. But they (GPs) don't always understand…
+        Homecare nurse: I called this GP and I told him “Doctor, this patient suffers from the vena cava superior syndrome, and Im not experienced in this'. “Oh but you don't have to worry about that…' was the answer! He didn't know it either, I guess, otherwise you don't say such a thing. That wasn't helping me at all. And then I'm glad the palliative home care team was there because these people are more knowledgeable and experienced. I was afraid the patient would suffocate, and then what? So I consulted the GP and asked him “What can we do if this happens? “Well, then you just call me, he said. But you know, if something like this is happening, you don't have time to make phone calls, you know, you need to be able to do something. But they (GPs) don't always understand…
         Family physician: One hour later I got a telephone call from the elderly home: 'yes, the palliative care nurse refuses to do that.' I say 'she refuses?!' 'Yes, she says that the doses you prescribed are too high.' I say 'okay, I'm going to calculate again, and I'll get advice from the anesthetist who cared for the patient in the hospital.' I call back and say 'the patient is going to die within 24 h so you should give the medications to make him comfortable'... she left without doing anything. She abandoned the patient. Kind of unnecessary conflict of competences. And the family was amazed: such chaos!."
     "
     Output:
@@ -137,7 +137,7 @@ const example_entity_extraction = `
     Here's an example:
     User Input:
     "
-        Homecare nurse: I called this GP and I told him “Doctor, this patient suffers from the vena cava superior syndrome, and I”m not experienced in this'. “Oh but you don”t have to worry about that…' was the answer! He didn't know it either, I guess, otherwise you don't say such a thing. That wasn't helping me at all. And then I'm glad the palliative home care team was there because these people are more knowledgeable and experienced. I was afraid the patient would suffocate, and then what? So I consulted the GP and asked him “What can we do if this happens?” “Well, then you just call me”, he said. But you know, if something like this is happening, you don't have time to make phone calls, you know, you need to be able to do something. But they (GPs) don't always understand…
+        Homecare nurse: I called this GP and I told him “Doctor, this patient suffers from the vena cava superior syndrome, and Im not experienced in this'. “Oh but you don't have to worry about that…' was the answer! He didn't know it either, I guess, otherwise you don't say such a thing. That wasn't helping me at all. And then I'm glad the palliative home care team was there because these people are more knowledgeable and experienced. I was afraid the patient would suffocate, and then what? So I consulted the GP and asked him “What can we do if this happens? “Well, then you just call me, he said. But you know, if something like this is happening, you don't have time to make phone calls, you know, you need to be able to do something. But they (GPs) don't always understand…
         Family physician: One hour later I got a telephone call from the elderly home: 'yes, the palliative care nurse refuses to do that.' I say 'she refuses?!' 'Yes, she says that the doses you prescribed are too high.' I say 'okay, I'm going to calculate again, and I'll get advice from the anesthetist who cared for the patient in the hospital.' I call back and say 'the patient is going to die within 24 h so you should give the medications to make him comfortable'... she left without doing anything. She abandoned the patient. Kind of unnecessary conflict of competences. And the family was amazed: such chaos!."
     "
     Output:
@@ -251,7 +251,7 @@ const example_property_extraction = `
 
     User Input:
     "
-        Text: 'Homecare nurse: I called this GP and I told him “Doctor, this patient suffers from the vena cava superior syndrome, and I”m not experienced in this'. “Oh but you don”t have to worry about that…' was the answer! He didn't know it either, I guess, otherwise you don't say such a thing. That wasn't helping me at all. And then I'm glad the palliative home care team was there because these people are more knowledgeable and experienced. I was afraid the patient would suffocate, and then what? So I consulted the GP and asked him “What can we do if this happens?” “Well, then you just call me”, he said. But you know, if something like this is happening, you don't have time to make phone calls, you know, you need to be able to do something. But they (GPs) don't always understand…
+        Text: 'Homecare nurse: I called this GP and I told him “Doctor, this patient suffers from the vena cava superior syndrome, and Im not experienced in this'. “Oh but you don't have to worry about that…' was the answer! He didn't know it either, I guess, otherwise you don't say such a thing. That wasn't helping me at all. And then I'm glad the palliative home care team was there because these people are more knowledgeable and experienced. I was afraid the patient would suffocate, and then what? So I consulted the GP and asked him “What can we do if this happens? “Well, then you just call me, he said. But you know, if something like this is happening, you don't have time to make phone calls, you know, you need to be able to do something. But they (GPs) don't always understand…
         Family physician: One hour later I got a telephone call from the elderly home: 'yes, the palliative care nurse refuses to do that.' I say 'she refuses?!' 'Yes, she says that the doses you prescribed are too high.' I say 'okay, I'm going to calculate again, and I'll get advice from the anesthetist who cared for the patient in the hospital.' I call back and say 'the patient is going to die within 24 h so you should give the medications to make him comfortable'... she left without doing anything. She abandoned the patient. Kind of unnecessary conflict of competences. And the family was amazed: such chaos!."'
         Entities: '''turtle
             @prefix : <http://activate.htwk-leipzig.de/model#> .
@@ -485,7 +485,7 @@ const example_relation_extraction = `
 
 User Input:
     "
-    Text: 'Homecare nurse: I called this GP and I told him “Doctor, this patient suffers from the vena cava superior syndrome, and I”m not experienced in this'. “Oh but you don”t have to worry about that…' was the answer! He didn't know it either, I guess, otherwise you don't say such a thing. That wasn't helping me at all. And then I'm glad the palliative home care team was there because these people are more knowledgeable and experienced. I was afraid the patient would suffocate, and then what? So I consulted the GP and asked him “What can we do if this happens?” “Well, then you just call me”, he said. But you know, if something like this is happening, you don't have time to make phone calls, you know, you need to be able to do something. But they (GPs) don't always understand…
+    Text: 'Homecare nurse: I called this GP and I told him “Doctor, this patient suffers from the vena cava superior syndrome, and Im not experienced in this'. “Oh but you don't have to worry about that…' was the answer! He didn't know it either, I guess, otherwise you don't say such a thing. That wasn't helping me at all. And then I'm glad the palliative home care team was there because these people are more knowledgeable and experienced. I was afraid the patient would suffocate, and then what? So I consulted the GP and asked him “What can we do if this happens? “Well, then you just call me, he said. But you know, if something like this is happening, you don't have time to make phone calls, you know, you need to be able to do something. But they (GPs) don't always understand…
     Family physician: One hour later I got a telephone call from the elderly home: 'yes, the palliative care nurse refuses to do that.' I say 'she refuses?!' 'Yes, she says that the doses you prescribed are too high.' I say 'okay, I'm going to calculate again, and I'll get advice from the anesthetist who cared for the patient in the hospital.' I call back and say 'the patient is going to die within 24 h so you should give the medications to make him comfortable'... she left without doing anything. She abandoned the patient. Kind of unnecessary conflict of competences. And the family was amazed: such chaos!."'
     Entities: '''turtle
         @prefix : <http://activate.htwk-leipzig.de/model#> .    
@@ -759,7 +759,7 @@ const example_conflict_extraction = `
 
     User Input:
     "
-    Text: 'Homecare nurse: I called this GP and I told him “Doctor, this patient suffers from the vena cava superior syndrome, and I”m not experienced in this'. “Oh but you don”t have to worry about that…' was the answer! He didn't know it either, I guess, otherwise you don't say such a thing. That wasn't helping me at all. And then I'm glad the palliative home care team was there because these people are more knowledgeable and experienced. I was afraid the patient would suffocate, and then what? So I consulted the GP and asked him “What can we do if this happens?” “Well, then you just call me”, he said. But you know, if something like this is happening, you don't have time to make phone calls, you know, you need to be able to do something. But they (GPs) don't always understand…
+    Text: 'Homecare nurse: I called this GP and I told him “Doctor, this patient suffers from the vena cava superior syndrome, and Im not experienced in this'. “Oh but you don't have to worry about that…' was the answer! He didn't know it either, I guess, otherwise you don't say such a thing. That wasn't helping me at all. And then I'm glad the palliative home care team was there because these people are more knowledgeable and experienced. I was afraid the patient would suffocate, and then what? So I consulted the GP and asked him “What can we do if this happens? “Well, then you just call me, he said. But you know, if something like this is happening, you don't have time to make phone calls, you know, you need to be able to do something. But they (GPs) don't always understand…
     Family physician: One hour later I got a telephone call from the elderly home: 'yes, the palliative care nurse refuses to do that.' I say 'she refuses?!' 'Yes, she says that the doses you prescribed are too high.' I say 'okay, I'm going to calculate again, and I'll get advice from the anesthetist who cared for the patient in the hospital.' I call back and say 'the patient is going to die within 24 h so you should give the medications to make him comfortable'... she left without doing anything. She abandoned the patient. Kind of unnecessary conflict of competences. And the family was amazed: such chaos!."'
     Data: '''turtle
         @prefix : <http://activate.htwk-leipzig.de/model#> .
@@ -953,7 +953,7 @@ const example_small = `
     Here's an example:
     User Input:
     "
-        Homecare nurse: I called this GP and I told him “Doctor, this patient suffers from the vena cava superior syndrome, and I”m not experienced in this'. “Oh but you don”t have to worry about that…' was the answer! He didn't know it either, I guess, otherwise you don't say such a thing. That wasn't helping me at all. And then I'm glad the palliative home care team was there because these people are more knowledgeable and experienced. I was afraid the patient would suffocate, and then what? So I consulted the GP and asked him “What can we do if this happens?” “Well, then you just call me”, he said. But you know, if something like this is happening, you don't have time to make phone calls, you know, you need to be able to do something. But they (GPs) don't always understand…
+        Homecare nurse: I called this GP and I told him Doctor, this patient suffers from the vena cava superior syndrome, and Im not experienced in this'. “Oh but you don't have to worry about that…' was the answer! He didn't know it either, I guess, otherwise you don't say such a thing. That wasn't helping me at all. And then I'm glad the palliative home care team was there because these people are more knowledgeable and experienced. I was afraid the patient would suffocate, and then what? So I consulted the GP and asked him “What can we do if this happens? “Well, then you just call me, he said. But you know, if something like this is happening, you don't have time to make phone calls, you know, you need to be able to do something. But they (GPs) don't always understand…
         Family physician: One hour later I got a telephone call from the elderly home: 'yes, the palliative care nurse refuses to do that.' I say 'she refuses?!' 'Yes, she says that the doses you prescribed are too high.' I say 'okay, I'm going to calculate again, and I'll get advice from the anesthetist who cared for the patient in the hospital.' I call back and say 'the patient is going to die within 24 h so you should give the medications to make him comfortable'... she left without doing anything. She abandoned the patient. Kind of unnecessary conflict of competences. And the family was amazed: such chaos!."
     "
     Output:
@@ -1041,20 +1041,20 @@ const example_small = `
  * and generate a knowledge graph in Turtle Syntax.
  */
 export const personaSystemPrompt = {
-    zero: personaBasePrompt + ttlOnlyInsctruction,
-    zeroPlusVocab: personaBasePrompt + vocabInstruction + ttlOnlyInsctruction,
-    one: personaBasePrompt + example_small + ttlOnlyInsctruction,
-    onePlusVocab: personaBasePrompt + vocabInstruction + example_small + ttlOnlyInsctruction
+    zero: personaBasePrompt + ttlOnlyInstruction,
+    zeroPlusVocab: personaBasePrompt + vocabInstruction + ttlOnlyInstruction,
+    one: personaBasePrompt + example_small + ttlOnlyInstruction,
+    onePlusVocab: personaBasePrompt + vocabInstruction + example_small + ttlOnlyInstruction
 };
 
 /**
  *  Raw system prompt for knowledge graph generation. Does not include any prompt engineering strategies.
  */
 export const baseSystemPrompt = {
-    zero: rawBasePrompt + ttlOnlyInsctruction,
-    zeroPlusVocab: rawBasePrompt + vocabInstruction + ttlOnlyInsctruction,
-    one: rawBasePrompt + example_small + ttlOnlyInsctruction,
-    onePlusVocab: rawBasePrompt + vocabInstruction + example_small + ttlOnlyInsctruction
+    zero: rawBasePrompt + ttlOnlyInstruction,
+    zeroPlusVocab: rawBasePrompt + vocabInstruction + ttlOnlyInstruction,
+    one: rawBasePrompt + example_small + ttlOnlyInstruction,
+    onePlusVocab: rawBasePrompt + vocabInstruction + example_small + ttlOnlyInstruction
 }
 
 /**
@@ -1077,7 +1077,7 @@ export const iterativeSystemPrompts = {
 
         :UniqueIdentifier a owl:NamedIndividual ;
         :ActivityDescription "description"@en ;
-        # Other language decriptions
+        # Other language descriptions
         :ActivityName "name"@en .
         # Other language names
         '''
@@ -1088,7 +1088,7 @@ export const iterativeSystemPrompts = {
         Given any text, you will extract the most important entities from it and assign them one or multiple of the following classes
         according to their context in the given situation:
         ${classExplanation2}
-        Output the entities in Turtle Syntax, generating Labels in German, English and Swedish for each entitiy:
+        Output the entities in Turtle Syntax, generating Labels in German, English and Swedish for each entity:
 
         '''turtle
         @prefix : <http://activate.htwk-leipzig.de/model#> .
@@ -1408,7 +1408,7 @@ export const iterativeSystemPrompts = {
         a description ("ConflictDescription"), the state ("ConflictState") "open" and an author ("WrittenBy") who must be one of the
         given entities that initiated the conflict/feedback/impression.
         If entities are involved in a conflict/feedback/impression, they must be linked
-        with the relation "HasParticipant" with the conflict/feedback/impression as the source entity. A conflict/feedback/impression must not have paricipants from
+        with the relation "HasParticipant" with the conflict/feedback/impression as the source entity. A conflict/feedback/impression must not have participants from
         more than three classes. If the participants belong to exactly three classes, the classes may only be from one of the following 
         combinations: (Subject,Instrument, Object), (Subject, Rule, Community), (Object, Community, DivisionOfLabour) or (Subject, Object, Community). Other
         combinations of three classes are not allowed! Make sure to never break this rule. 
@@ -1456,7 +1456,7 @@ export const iterativeSystemPrompts = {
         :ConflictTitle "Title"@en ;
         # Other language titles
         :ConflictDescription "Description"@en ;
-        # Other language decriptions  
+        # Other language descriptions  
         :ConflictState "open" ;
         :WrittenBy :EntityIDs ;
         :HasParticipant :EntityIDs ;
@@ -1482,7 +1482,7 @@ export const iterativeSystemPrompts = {
         Entities: '''turtle ... '''
         Conflicts: '''turtle ... '''
         
-        ${ttlOnlyInsctruction}
+        ${ttlOnlyInstruction}
         `,
     ],
     onePlusVocab: [
@@ -1497,7 +1497,7 @@ export const iterativeSystemPrompts = {
 
         :UniqueIdentifier a owl:NamedIndividual ;
         :ActivityDescription "description"@en ;
-        # Other language decriptions
+        # Other language descriptions
         :ActivityName "name"@en .
         # Other language names
         '''
@@ -1510,7 +1510,7 @@ export const iterativeSystemPrompts = {
         Given any text, you will extract the most important entities from it and assign them one or multiple of the following classes
         according to their context in the given situation:
         ${classExplanation2}
-        Output the entities in Turtle Syntax, generating Labels in German, English and Swedish for each entitiy:
+        Output the entities in Turtle Syntax, generating Labels in German, English and Swedish for each entity:
 
         '''turtle
         @prefix : <http://activate.htwk-leipzig.de/model#> .
@@ -1836,7 +1836,7 @@ export const iterativeSystemPrompts = {
         a description ("ConflictDescription"), the state ("ConflictState") "open" and an author ("WrittenBy") who must be one of the
         given entities that initiated the conflict/feedback/impression.
         If entities are involved in a conflict/feedback/impression, they must be linked
-        with the relation "HasParticipant" with the conflict/feedback/impression as the source entity. A conflict/feedback/impression must not have paricipants from
+        with the relation "HasParticipant" with the conflict/feedback/impression as the source entity. A conflict/feedback/impression must not have participants from
         more than three classes. If the participants belong to exactly three classes, the classes may only be from one of the following 
         combinations: (Subject,Instrument, Object), (Subject, Rule, Community), (Object, Community, DivisionOfLabour) or (Subject, Object, Community). Other
         combinations of three classes are not allowed! Make sure to never break this rule. 
@@ -1884,7 +1884,7 @@ export const iterativeSystemPrompts = {
         :ConflictTitle "Title"@en ;
         # Other language titles
         :ConflictDescription "Description"@en ;
-        # Other language decriptions  
+        # Other language descriptions  
         :ConflictState "open" ;
         :WrittenBy :EntityIDs ;
         :HasParticipant :EntityIDs ;
@@ -1912,7 +1912,7 @@ export const iterativeSystemPrompts = {
         Entities: '''turtle ... '''
         Conflicts: '''turtle ... '''
         
-        ${ttlOnlyInsctruction}
+        ${ttlOnlyInstruction}
         `,
     ],
     zero: [
@@ -1927,7 +1927,7 @@ export const iterativeSystemPrompts = {
 
     :UniqueIdentifier a owl:NamedIndividual ;
     :ActivityDescription "description"@en ;
-    # Other language decriptions
+    # Other language descriptions
     :ActivityName "name"@en .
     # Other language names
     '''
@@ -1939,7 +1939,7 @@ export const iterativeSystemPrompts = {
     according to their context in the given situation: 
     ${classExplanation2}
 
-    Output the entities in Turtle Syntax, generating Labels in German, English and Swedish for each entitiy:
+    Output the entities in Turtle Syntax, generating Labels in German, English and Swedish for each entity:
 
     '''turtle
     @prefix : <http://activate.htwk-leipzig.de/model#> .
@@ -2030,7 +2030,7 @@ export const iterativeSystemPrompts = {
     a description ("ConflictDescription"), the state ("ConflictState") "open" and an author ("WrittenBy") who must be one of the
     given entities that initiated the conflict/feedback/impression.
     If entities are involved in a conflict/feedback/impression, they must be linked
-    with the relation "HasParticipant" with the conflict/feedback/impression as the source entity. A conflict/feedback/impression must not have paricipants from
+    with the relation "HasParticipant" with the conflict/feedback/impression as the source entity. A conflict/feedback/impression must not have participants from
     more than three classes. If the participants belong to exactly three classes, the classes may only be from one of the following 
     combinations: (Subject,Instrument, Object), (Subject, Rule, Community), (Object, Community, DivisionOfLabour) or (Subject, Object, Community). Other
     combinations of three classes are not allowed!
@@ -2078,7 +2078,7 @@ export const iterativeSystemPrompts = {
     :ConflictTitle "Title"@en ;
     # Other language titles
     :ConflictDescription "Description"@en ;
-    # Other language decriptions  
+    # Other language descriptions  
     :ConflictState "open" ;
     :WrittenBy :EntityIDs ;
     :HasParticipant :EntityIDs ;
@@ -2104,7 +2104,7 @@ export const iterativeSystemPrompts = {
     Entities: '''turtle ... '''
     Conflicts: '''turtle ... '''
     
-    ${ttlOnlyInsctruction}
+    ${ttlOnlyInstruction}
     `,
     ],
     one: [
@@ -2119,7 +2119,7 @@ export const iterativeSystemPrompts = {
 
     :UniqueIdentifier a owl:NamedIndividual ;
     :ActivityDescription "description"@en ;
-    # Other language decriptions
+    # Other language descriptions
     :ActivityName "name"@en .
     # Other language names
     '''
@@ -2133,7 +2133,7 @@ export const iterativeSystemPrompts = {
     according to their context in the given situation: 
     ${classExplanation2}
 
-    Output the entities in Turtle Syntax, generating Labels in German, English and Swedish for each entitiy:
+    Output the entities in Turtle Syntax, generating Labels in German, English and Swedish for each entity:
 
     '''turtle
     @prefix : <http://activate.htwk-leipzig.de/model#> .
@@ -2230,7 +2230,7 @@ export const iterativeSystemPrompts = {
     a description ("ConflictDescription"), the state ("ConflictState") "open" and an author ("WrittenBy") who must be one of the
     given entities that initiated the conflict/feedback/impression.
     If entities are involved in a conflict/feedback/impression, they must be linked
-    with the relation "HasParticipant" with the conflict/feedback/impression as the source entity. A conflict/feedback/impression must not have paricipants from
+    with the relation "HasParticipant" with the conflict/feedback/impression as the source entity. A conflict/feedback/impression must not have participants from
     more than three classes. If the participants belong to exactly three classes, the classes may only be from one of the following 
     combinations: (Subject,Instrument, Object), (Subject, Rule, Community), (Object, Community, DivisionOfLabour) or (Subject, Object, Community). Other
     combinations of three classes are not allowed!
@@ -2278,7 +2278,7 @@ export const iterativeSystemPrompts = {
     :ConflictTitle "Title"@en ;
     # Other language titles
     :ConflictDescription "Description"@en ;
-    # Other language decriptions  
+    # Other language descriptions  
     :ConflictState "open" ;
     :WrittenBy :EntityIDs ;
     :HasParticipant :EntityIDs ;
@@ -2306,7 +2306,7 @@ export const iterativeSystemPrompts = {
     Entities: '''turtle ... '''
     Conflicts: '''turtle ... '''
     
-    ${ttlOnlyInsctruction}
+    ${ttlOnlyInstruction}
     `,
     ],
 }
@@ -2645,7 +2645,7 @@ const example_template_included = `
 
     :Labelling_Artifacts a :Rule,
             owl:NamedIndividual ;
-        rdfs:label "Organisation/Labelling Artifacts"@en .
+        rdfs:label "Organization/Labelling Artifacts"@en .
 
     :Leaving_Implicit_Defer a :DivisionOfLabour,
             owl:NamedIndividual ;
@@ -2737,7 +2737,7 @@ const example_template_included = `
 
     :Scheduling a :Rule,
             owl:NamedIndividual ;
-        rdfs:label "Organisation/Scheduling"@en .
+        rdfs:label "Organization/Scheduling"@en .
 
     :Sharing a :Instrument,
             owl:NamedIndividual ;
@@ -2753,7 +2753,7 @@ const example_template_included = `
 
     :Stock a :Rule,
             owl:NamedIndividual ;
-        rdfs:label "Organisation/Stock"@en .
+        rdfs:label "Organization/Stock"@en .
 
     :Substance a :Rule,
             owl:NamedIndividual ;
@@ -3186,7 +3186,7 @@ const template = `
 
     :Labelling_Artifacts a :Rule,
             owl:NamedIndividual ;
-        rdfs:label "Organisation/Labelling Artifacts"@en .
+        rdfs:label "Organization/Labelling Artifacts"@en .
 
     :Leaving_Implicit_Defer a :DivisionOfLabour,
             owl:NamedIndividual ;
@@ -3290,7 +3290,7 @@ const template = `
 
     :Scheduling a :Rule,
             owl:NamedIndividual ;
-        rdfs:label "Organisation/Scheduling"@en .
+        rdfs:label "Organization/Scheduling"@en .
 
     :Shared_Care a :DivisionOfLabour,
             owl:NamedIndividual ;
@@ -3318,7 +3318,7 @@ const template = `
 
     :Stock a :Rule,
             owl:NamedIndividual ;
-        rdfs:label "Organisation/Stock"@en .
+        rdfs:label "Organization/Stock"@en .
 
     :Substance a :Rule,
             owl:NamedIndividual ;
@@ -3425,7 +3425,7 @@ export const settingGenerationPrompt = `
 
     :UniqueIdentifier a owl:NamedIndividual ;
     :ActivityDescription "description"@en ;
-    # Other language decriptions
+    # Other language descriptions
     :ActivityName "name"@en .
     # Other language names
 
@@ -3454,7 +3454,7 @@ export const feedbackSystemPrompts = [
         Author Role: "Role of the participant"
         Notes: "Thoughts written down by the audience"
         
-        Output the entities in Turtle Syntax, generating Labels in German, English and Swedish for each entitiy, structured as follows:
+        Output the entities in Turtle Syntax, generating Labels in German, English and Swedish for each entity, structured as follows:
         '''turtle
         @prefix : <http://activate.htwk-leipzig.de/model#> .
         @prefix owl: <http://www.w3.org/2002/07/owl#> .
@@ -3714,7 +3714,7 @@ export const feedbackSystemPrompts = [
         a description ("ConflictDescription"), the state ("ConflictState") "open" and an author ("WrittenBy") who must be one of the
         given entities that initiated the conflict/feedback/impression.
         If entities are involved in a conflict/feedback/impression, they must be linked
-        with the relation "HasParticipant" with the conflict/feedback/impression as the source entity. A conflict/feedback/impression must not have paricipants from
+        with the relation "HasParticipant" with the conflict/feedback/impression as the source entity. A conflict/feedback/impression must not have participants from
         more than three classes. If the participants belong to exactly three classes, the classes may only be from one of the following 
         combinations: (Subject,Instrument, Object), (Subject, Rule, Community), (Object, Community, DivisionOfLabour) or (Subject, Object, Community). Other
         combinations of three classes are not allowed! Make sure to never break this rule. 
@@ -3743,7 +3743,7 @@ export const feedbackSystemPrompts = [
         :ConflictTitle "Title"@en ;
         # Other language titles
         :ConflictDescription "Description"@en ;
-        # Other language decriptions  
+        # Other language descriptions  
         :ConflictState "open" ;
         :WrittenBy :EntityIDs ;
         :HasParticipant :EntityIDs ;
@@ -3766,5 +3766,5 @@ export const ttlMergePrompt = `
     Given multiple Turtle Syntax inputs, you will merge them into one Turtle Syntax output. Do not concatenate the inputs, but merge them by
     combining the triples semantically and ensuring that there are no duplicate triples in the output.
     
-    ${ttlOnlyInsctruction}
+    ${ttlOnlyInstruction}
 `

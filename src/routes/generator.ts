@@ -2,11 +2,10 @@
 import { Router } from 'express';
 import { supportedLLMs } from '../data/resources.js';
 import { errorMessages, logFilenames, progressMessages } from '../data/staticContent.js';
-import { parseLLMOutput, writeToLog } from '../services/utils.js';
+import { parseLLMOutput, requestKgGen, writeToLog } from '../services/utils.js';
 import { validate } from '../services/validator.js';
 import { baseSystemPrompt, iterativeSystemPrompts, personaSystemPrompt, ttlEditPrompt, ttlSyntaxFixPrompt } from '../data/prompts.js';
 import { queryGemini } from '../services/llm/gemini.js';
-import { requestKgGen } from '../services/generator/baseGen.js';
 import { getIO } from '../socket.js';
 
 const router = Router();
