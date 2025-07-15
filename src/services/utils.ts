@@ -12,6 +12,18 @@ export function parseLLMOutput(message: string): string {
 }
 
 /**
+ * Removes all lines that start with @ from a string
+ * @param text - The input text string
+ * @returns The text with lines starting with @ removed
+ */
+export function removeAtLines(text: string): string {
+    return text
+        .split('\n')
+        .filter(line => !line.trim().startsWith('@') && line.length > 0)
+        .join('\n');
+}
+
+/**
  * Writes the input to a debug log file with a timestamp in root
  */
 import * as fs from 'fs';

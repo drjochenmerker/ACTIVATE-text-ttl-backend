@@ -6,6 +6,9 @@
  */
 
 import { Parser, Quad } from 'n3'
+import { requestKgGen, writeToLog } from './utils'
+import { LLM } from '../data/types'
+import { ttlSyntaxFixPrompt } from '../data/prompts'
 
 type Feedback = {
     warnings: string[]
@@ -18,6 +21,32 @@ const regexp: Record<string, RegExp> = {
     double: /[-+]?\d*([.]\d+)?/,
     float: /[-+]?\d*[.]\d+/,
     int: /^[-+]?(0|[1-9]\d*)$/,
+}
+
+export async function validateTTLObject(obj: Record<string, string>, logFileName: string, llm: LLM): Promise<Record<string, string> | undefined> {
+    let validateCount = 0;
+    let validated = false;
+    for (const key of Object.keys(obj) as (keyof typeof obj)[]) {
+        do {
+            validateCount++;
+            if (validateCount > 5) {
+                return undefined;
+            }
+            let validatorResult = await validate(obj[key]);
+            writeToLog(logFileName, "Validator Call #" + validateCount, validatorResult)
+            if (validatorResult.errors.length > 0) {
+                const fixedTTL = await requestKgGen(llm, ttlSyntaxFixPrompt, obj[key] + '\n' + JSON.stringify(validatorResult.errors), logFileName);
+                if (fixedTTL === 'error' || fixedTTL.length === 0) {
+                    return undefined;
+                }
+                obj[key] = fixedTTL;
+            } else {
+                validated = true;
+            }
+        } while (!validated)
+        // Return generated TTL
+    }
+    return obj;
 }
 
 export async function validate(turtle: string): Promise<Feedback> {
