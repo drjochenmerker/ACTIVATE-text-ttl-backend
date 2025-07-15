@@ -3,8 +3,8 @@ import { Router } from 'express';
 import { supportedLLMs } from '../data/resources.js';
 import { errorMessages, logFilenames } from '../data/staticContent.js';
 import { removeAtLines, requestKgGen, writeToLog } from '../services/utils.js';
-import { validate, validateTTLObject } from '../services/validator.js';
-import { feedbackSystemPrompts, settingGenerationPrompts, ttlMergePrompts, ttlSyntaxFixPrompt } from '../data/prompts.js';
+import { validateTTLObject } from '../services/validator.js';
+import { feedbackSystemPrompts, settingGenerationPrompts, ttlMergePrompts } from '../data/prompts.js';
 
 const router = Router();
 
