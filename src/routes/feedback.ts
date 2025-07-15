@@ -185,9 +185,6 @@ router.post('/settingGen', async (req, res) => {
  *                         type: string
  *                       description: The classes/types of the entity.
  *                 description: Existing entities in the setting as tuples of (entity, entityClass). Optional.
- *               role:
- *                 type: string
- *                 description: The role of the feedback provider (e.g., "Ärztin", "Nurse", "Patient").
  *               feedback:
  *                 type: object
  *                 description: Structured feedback object containing role, case, and question-answer data.
@@ -230,7 +227,6 @@ router.post('/settingGen', async (req, res) => {
  *                 classes: ["subject"]
  *               - label: "familyMember"
  *                 classes: ["object"]
- *             role: "nurse"
  *             feedback: {
  *               "role": "Ärztin",
  *               "case": "Lungenkarziom 1",
