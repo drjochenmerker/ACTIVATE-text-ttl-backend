@@ -29,9 +29,6 @@ export function removeAtLines(text: string): string {
 import * as fs from 'fs';
 import { LLM } from '../data/types';
 import { logFilenames } from '../data/staticContent';
-import { queryOpenRouter } from './llm/openRouter';
-import { queryGemini } from './llm/gemini';
-import { queryAzure } from './llm/azure';
 export function writeToLog(filename: string, header: string, content: string | object): void {
     const file = fs.createWriteStream(`./logs/${filename}.log`, { flags: 'a' });
     if (typeof content === 'object') {
@@ -59,19 +56,36 @@ export function clearLog(filename: string): void {
  * @throws Will reject the promise if the LLM endpoint is unsupported.
  */
 export async function requestKgGen(llm: LLM, systemPrompt: string, activityText: string, logFilename: string = logFilenames.misc): Promise<string> {
-    let res: string;
-    switch (llm.endpoint) {
-        case 'openRouter':
-            res = parseLLMOutput(await queryOpenRouter(llm.id, systemPrompt, activityText, logFilename))
-            break;
-        case 'gemini':
-            res = parseLLMOutput(await queryGemini(llm.id, systemPrompt, activityText, logFilename));
-            break;
-        case 'azure':
-            res = parseLLMOutput(await queryAzure(systemPrompt, activityText, logFilename));
-            break;
-        default:
-            return Promise.reject(new Error("Unsupported LLM endpoint"));
+    return parseLLMOutput(await queryGemini(llm.id, systemPrompt, activityText, logFilename));
+}
+
+import { GoogleGenAI } from '@google/genai';
+import 'dotenv/config';
+
+/**
+ * Generic function to query Gemini
+ * @param model gemini model id
+ * @param systemPrompt system prompt
+ * @param userPrompt user prompt
+ * @returns message or 'error'
+ */
+async function queryGemini(model: string, systemPrompt: string, userPrompt: string, logFilename: string = logFilenames.misc): Promise<string> {
+    const gemini = new GoogleGenAI({
+        apiKey: process.env.GEMINI_API_KEY,
+    });
+    try {
+        const response = await gemini.models.generateContent({
+            model: model,
+            contents: userPrompt,
+            config: {
+                systemInstruction: systemPrompt,
+                temperature: 0.2
+            }
+        });
+        writeToLog(logFilename, "Gemini Request", response)
+        return response.text || 'error'
+    } catch (error) {
+        console.error('Error querying Gemini:', error);
+        return "error"
     }
-    return res;
 }

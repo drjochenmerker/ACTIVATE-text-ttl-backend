@@ -1,14 +1,12 @@
 // src/routes/feedback.ts
 import { Router } from 'express';
-import { supportedLLMs } from '../data/resources.js';
 import { errorMessages, logFilenames } from '../data/staticContent.js';
 import { removeAtLines, requestKgGen, writeToLog } from '../services/utils.js';
 import { validateTTLObject } from '../services/validator.js';
 import { feedbackSystemPrompts, settingGenerationPrompts, ttlMergePrompts } from '../data/prompts.js';
+import { geminiDetail } from '../data/resources.js';
 
 const router = Router();
-
-const LLM_ID: string = 'gemini-2.5-flash'; // Default LLM ID for feedback generation
 
 /**
  * @swagger
@@ -90,7 +88,7 @@ const LLM_ID: string = 'gemini-2.5-flash'; // Default LLM ID for feedback genera
 router.post('/settingGen', async (req, res) => {
     writeToLog(logFilenames.feedback, "Trying to generate setting: ", JSON.stringify(req.body));
     const settingText = req.body.setting;
-    const llm = supportedLLMs.find((llm) => llm.id === LLM_ID);
+    const llm = geminiDetail
     // Check if request has all required fields
     if (!settingText || !llm) {
         res.status(200).json({
@@ -271,7 +269,7 @@ router.post('/submit', async (req, res) => {
     const feedbackSetting = req.body.setting;
     const settingEntities = JSON.stringify(req.body.entities) || [];
     const feedback = JSON.stringify(req.body.feedback);
-    const llm = supportedLLMs.find((llm) => llm.id === LLM_ID);
+    const llm = geminiDetail
     // Check if request has all required fields
     if (!feedbackSetting || !feedback || !llm) {
         res.status(200).json({
@@ -401,7 +399,7 @@ router.post('/pool', async (req, res) => {
     writeToLog(logFilenames.feedback, "Trying to pool results: ", JSON.stringify(req.body));
     const entityPool = req.body.entities;
     const tensionPool = req.body.tensions;
-    const llm = supportedLLMs.find((llm) => llm.id === LLM_ID);
+    const llm = geminiDetail
     // Check if request has all required fields
     if (!entityPool || !tensionPool || !llm) {
         res.status(200).json({

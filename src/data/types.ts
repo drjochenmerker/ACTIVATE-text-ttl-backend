@@ -15,17 +15,3 @@ export type LLM = {
     endpoint: string;
     description: multiLanguageString;
 };
-// Generator-Pipeline type definition
-export type GeneratorPipeline = {
-    id: string;
-    name: multiLanguageString;
-    description: multiLanguageString;
-};
-// Prompt Shot Type
-export enum PromptShot {
-    zero,
-    zeroPlusVocab,
-    one,
-    onePlusVocab,
-    few,
-}
