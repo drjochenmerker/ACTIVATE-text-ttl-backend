@@ -30,6 +30,10 @@ import * as fs from 'fs';
 import { LLM } from '../data/types';
 import { logFilenames } from '../data/staticContent';
 export function writeToLog(filename: string, header: string, content: string | object): void {
+    // Ensure the logs directory exists
+    if (!fs.existsSync('./logs')) {
+        fs.mkdirSync('./logs', { recursive: true });
+    }
     const file = fs.createWriteStream(`./logs/${filename}.log`, { flags: 'a' });
     if (typeof content === 'object') {
         content = JSON.stringify(content, null, 2); // Format object as JSON
