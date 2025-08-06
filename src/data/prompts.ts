@@ -115,13 +115,9 @@ export const feedbackSystemPrompts = [
         and write transform them to Turtle Syntax.
 
         The extracted tensions, feedbacks and impressions must be assigned a unique identifier, the class "Conflict", a title ("ConflictTitle"),
-        a description ("ConflictDescription"), the state ("ConflictState") "open" and an author ("WrittenBy") who must be one of the
-        given entities that initiated the conflict/feedback/impression.
-        If entities are involved in a conflict/feedback/impression, they must be linked
-        with the relation "HasParticipant" with the conflict/feedback/impression as the source entity. A conflict/feedback/impression must not have participants from
-        more than three classes. If the participants belong to exactly three classes, the classes may only be from one of the following 
-        combinations: (Subject,Instrument, Object), (Subject, Rule, Community), (Object, Community, DivisionOfLabour) or (Subject, Object, Community). Other
-        combinations of three classes are not allowed! Make sure to never break this rule. 
+        a description ("ConflictDescription"), the state ("ConflictState") "open" and an author ("WrittenBy") who must be one of the given entities that initiated the conflict/feedback/impression.
+        If entities are involved in a conflict/feedback/impression, they must be linked with the relation "HasParticipant" with the conflict/feedback/impression as the source entity. A conflict/feedback/impression must not have participants from more than three classes. If the participants belong to exactly three classes, the classes may only be from one of the following combinations: (Subject,Instrument, Object), (Subject, Rule, Community), (Object, Community, DivisionOfLabour) or (Subject, Object, Community).
+        Other combinations of three classes are not allowed! Make sure to never break this rule. 
         If the participants belong to just one or two classes, the classes may be chosen freely.   
 
         If other entities respond to a conflict/feedback/impression, they must be linked by creating a new entity of the "Comment" class and linked
@@ -167,7 +163,7 @@ export const feedbackSystemPrompts = [
         :ConflictDescription "Description"@en ;
         # Other language descriptions  
         :ConflictState "open" ;
-        :WrittenBy "Label of entity that initiated the conflict/feedback/(self)impression"@en
+        :WrittenBy :Entity ;
         # Other language authors;
         :HasParticipant :EntityIDs ;
         :CreationDate "Timestamp" ;
@@ -176,7 +172,7 @@ export const feedbackSystemPrompts = [
         :CommentID a :Comment ;
         :CommentDescription "Comment"@en ;
         # Other language comments
-        :WrittenBy "Label of entity that initiated the conflict/feedback/(self)impression"@en
+        :WrittenBy :Entity ;
         # Other language authors;
         :CreationDate "Timestamp" .
         :Origin: "Question and Answer of source as rdf:json"
