@@ -37,9 +37,9 @@ Output only the fixed Turtle Syntax, without any additional text or explanations
 
 export const settingGenerationPrompts = [
     `
-        Given a description of a medical simulation, you will extract a fitting name and a description for the given setting. 
-        Output the results in Turtle Syntax, generating Labels in German, English and Swedish. 
-    
+        Given a description of a medical simulation, you will build output in Turtle Syntax, generating Labels in German, English and Swedish.
+        If given a title, you will use it as the ActivityName, otherwise you will generate a title from the description.
+
         Refer to the following template for the output that you can expand upon:
         
         '''turtle
@@ -60,7 +60,8 @@ export const settingGenerationPrompts = [
         Given a description of a medical simulation, you will extract all entities present and assign them one or multiple of the following classes according to their context in the given situation:
         ${classExplanation}
 
-        One entity that must always be present is the Instructor, which is a Subject entity.
+        If given a default entity, you will add it as a Subject entity and generate fitting labels. 
+        If no default entity is given, generate an Instructor entity of the type Subject. 
 
         Output the entities you've added in Turtle Syntax, generating Labels in German, English and Swedish for each entity, structured as follows:
         '''turtle
@@ -135,17 +136,20 @@ export const feedbackSystemPrompts = [
         Existing Entities: [{"label":"nurse","classes":["subject"]}, ...]
         Feedback: {
             "role": "nurse",
-            "case": "caseId",
             "data": [
-                {
-                "question1": "How do you feel about the interprofessional collaboration simulation you have just completed?",
-                "answer1": "- some thoughts",
-                "question2": "Think of a part of the activity that you found very positive, constructive or satisfying. Please describe what happened in this phase in a few sentences.",
-                "answer2": "- some positive thoughts",
-                "question3": "Think of a part of the activity that you found very negative, counterproductive or disappointing. Please describe what happened in this phase in a few sentences.",
-                "answer3": "- some negative thoughts"
-                }
-            ]
+                 {
+                   "question": "How do you feel about the interprofessional collaboration simulation you have just completed?",
+                   "answer": "- war ruhiger als gestern\n- innerlich weniger angespannt\n- inhaltlich schwieriges Thema\n- zum Schluss unsicher, was ich noch sagen soll"
+                 },
+                 {
+                   "question": "Think of a part of the activity that you found very positive, constructive or satisfying. Please describe what happened in this phase in a few sentences.",
+                   "answer": "- versucht viel zuzuhören\n- Message gut rübergebracht\n- nach dem relvanten Inhalt versucht über andere, positive Dinge zu reden"
+                 },
+                 {
+                   "question": "Think of a part of the activity that you found very negative, counterproductive or disappointing. Please describe what happened in this phase in a few sentences.",
+                   "answer": "- Inhalt schon abgearbeitet, Dozentin hat aber noch nicht geklopft"
+                 }
+               ]
         }
         Timestamp: "Timestamp of the feedback (Example: 2024-06-01T12:30:00Z)"
         

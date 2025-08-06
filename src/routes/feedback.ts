@@ -14,7 +14,7 @@ const router = Router();
  *   post:
  *     summary: Generate medical simulation setting and entity descriptions in TTL format
  *     description: |
- *       Accepts a medical simulation description and generates corresponding TTL (Turtle) data containing:
+ *       Accepts a medical simulation scenario definition and generates corresponding TTL (Turtle) data containing:
  *       1. **Setting Information**: Extracts a fitting name and description for the simulation setting
  *       2. **Entity Extraction**: Identifies all entities present in the simulation and assigns them appropriate classes
  *       
@@ -35,18 +35,28 @@ const router = Router();
  *           schema:
  *             type: object
  *             required:
- *               - setting
+ *               - title
+ *               - description
+ *               - defaultRole
  *             properties:
- *               setting:
+ *               title:
+ *                 type: string
+ *                 description: Title of the medical simulation scenario.
+ *               description:
  *                 type: string
  *                 description: |
- *                   Description of the medical simulation scenario. Should include context about:
+ *                   Detailed description of the medical simulation scenario. Should include context about:
  *                   - Physical setting (hospital room, clinic, home visit, etc.)
  *                   - Participants involved (patients, healthcare professionals, family members)
  *                   - Scenario context (medical condition, care situation, interprofessional collaboration)
  *                   - Activities or interactions taking place
+ *               defaultRole:
+ *                 type: string
+ *                 description: The default role for participants in the simulation.
  *           example:
- *             setting: "A hospice room where a terminally ill patient is cared for by a nurse and visited by family members. The simulation focuses on end-of-life care communication and emotional support."
+ *             title: "Hospice Care Simulation"
+ *             description: "A hospice room where a terminally ill patient is cared for by a nurse and visited by family members. The simulation focuses on end-of-life care communication and emotional support."
+ *             defaultRole: "Nurse"
  *     responses:
  *       200:
  *         description: Generation result or error message.
@@ -87,10 +97,11 @@ const router = Router();
  */
 router.post('/settingGen', async (req, res) => {
     writeToLog(logFilenames.feedback, "Trying to generate setting: ", JSON.stringify(req.body));
-    const settingText = req.body.setting;
-    const llm = geminiDetail
+    const description = req.body.description;
+    const title = req.body.title;
+    const defaultRole = req.body.defaultRole;
     // Check if request has all required fields
-    if (!settingText || !llm) {
+    if (!description) {
         res.status(200).json({
             error: errorMessages.missingFields,
         });
@@ -104,7 +115,11 @@ router.post('/settingGen', async (req, res) => {
     let result: string;
     writeToLog(logFilenames.feedback, "Starting Setting Generator", '');
     // Setting Extraction
-    result = await requestKgGen(llm, settingGenerationPrompts[0], settingText, logFilenames.feedback);
+    result = await requestKgGen(geminiDetail, settingGenerationPrompts[0],
+        `Description: ${description}
+        Title: ${title}`,
+        logFilenames.feedback);
+
     if (result === 'error' || result.length === 0) {
         res.status(200).json({
             error: errorMessages.generationFailed,
@@ -114,7 +129,10 @@ router.post('/settingGen', async (req, res) => {
     generatedTTLObject.setting = result;
 
     // Entity Extraction
-    result = await requestKgGen(llm, settingGenerationPrompts[1], settingText, logFilenames.feedback);
+    result = await requestKgGen(geminiDetail, settingGenerationPrompts[1],
+        `Description: ${description}
+        Default Entity: ${defaultRole}`,
+        logFilenames.feedback);
     if (result === 'error' || result.length === 0) {
         res.status(200).json({
             error: errorMessages.generationFailed,
@@ -124,7 +142,7 @@ router.post('/settingGen', async (req, res) => {
     generatedTTLObject.entities = result;
 
     // Validate generated TTL
-    const validatorRes = await validateTTLObject(generatedTTLObject, logFilenames.feedback, llm)
+    const validatorRes = await validateTTLObject(generatedTTLObject, logFilenames.feedback, geminiDetail)
     if (!validatorRes) {
         res.status(200).json({
             error: errorMessages.validationFailed,
@@ -132,9 +150,9 @@ router.post('/settingGen', async (req, res) => {
         return;
     }
     // Merge and return
-    writeToLog(logFilenames.feedback, "Generated TTL", validatorRes.setting + removeAtLines(validatorRes.entities));
+    writeToLog(logFilenames.feedback, "Generated TTL", validatorRes.setting + "\n" + removeAtLines(validatorRes.entities));
     res.json({
-        status: 'done', ttl: validatorRes.setting + removeAtLines(validatorRes.entities)
+        status: 'done', ttl: validatorRes.setting + "\n" + removeAtLines(validatorRes.entities)
     });
 });
 
@@ -198,24 +216,12 @@ router.post('/settingGen', async (req, res) => {
  *                     items:
  *                       type: object
  *                       properties:
- *                         question1:
+ *                         question:
  *                           type: string
- *                           description: First reflection question.
- *                         answer1:
+ *                           description: Reflection question.
+ *                         answer:
  *                           type: string
- *                           description: Answer to the first question.
- *                         question2:
- *                           type: string
- *                           description: Second reflection question (positive aspects).
- *                         answer2:
- *                           type: string
- *                           description: Answer to the second question.
- *                         question3:
- *                           type: string
- *                           description: Third reflection question (negative aspects).
- *                         answer3:
- *                           type: string
- *                           description: Answer to the third question.
+ *                           description: Answer to the reflection question.
  *           example:
  *             setting: "A hospice room where a terminally ill patient is cared for by a nurse and visited by family members"
  *             entities:
@@ -227,15 +233,18 @@ router.post('/settingGen', async (req, res) => {
  *                 classes: ["object"]
  *             feedback: {
  *               "role": "Ärztin",
- *               "case": "Lungenkarziom 1",
  *               "data": [
  *                 {
- *                   "question1": "How do you feel about the interprofessional collaboration simulation you have just completed?",
- *                   "answer1": "- war ruhiger als gestern\n- innerlich weniger angespannt\n- inhaltlich schwieriges Thema\n- zum Schluss unsicher, was ich noch sagen soll",
- *                   "question2": "Think of a part of the activity that you found very positive, constructive or satisfying. Please describe what happened in this phase in a few sentences.",
- *                   "answer2": "- versucht viel zuzuhören\n- Message gut rübergebracht\n- nach dem relvanten Inhalt versucht über andere, positive Dinge zu reden",
- *                   "question3": "Think of a part of the activity that you found very negative, counterproductive or disappointing. Please describe what happened in this phase in a few sentences.",
- *                   "answer3": "- Inhalt schon abgearbeitet, Dozentin hat aber noch nicht geklopft"
+ *                   "question": "How do you feel about the interprofessional collaboration simulation you have just completed?",
+ *                   "answer": "- war ruhiger als gestern\n- innerlich weniger angespannt\n- inhaltlich schwieriges Thema\n- zum Schluss unsicher, was ich noch sagen soll"
+ *                 },
+ *                 {
+ *                   "question": "Think of a part of the activity that you found very positive, constructive or satisfying. Please describe what happened in this phase in a few sentences.",
+ *                   "answer": "- versucht viel zuzuhören\n- Message gut rübergebracht\n- nach dem relvanten Inhalt versucht über andere, positive Dinge zu reden"
+ *                 },
+ *                 {
+ *                   "question": "Think of a part of the activity that you found very negative, counterproductive or disappointing. Please describe what happened in this phase in a few sentences.",
+ *                   "answer": "- Inhalt schon abgearbeitet, Dozentin hat aber noch nicht geklopft"
  *                 }
  *               ]
  *             }
@@ -269,9 +278,8 @@ router.post('/submit', async (req, res) => {
     const feedbackSetting = req.body.setting;
     const settingEntities = JSON.stringify(req.body.entities) || [];
     const feedback = JSON.stringify(req.body.feedback);
-    const llm = geminiDetail
     // Check if request has all required fields
-    if (!feedbackSetting || !feedback || !llm) {
+    if (!feedbackSetting || !feedback || !geminiDetail) {
         res.status(200).json({
             error: errorMessages.missingFields,
         });
@@ -286,7 +294,7 @@ router.post('/submit', async (req, res) => {
     writeToLog(logFilenames.feedback, "Starting Submission Parser", '');
 
     // Entity Extraction
-    result = await requestKgGen(llm, feedbackSystemPrompts[0], `
+    result = await requestKgGen(geminiDetail, feedbackSystemPrompts[0], `
             Setting: ${feedbackSetting}
             Existing Entities: ${settingEntities}
             Feedback: ${feedback}
@@ -300,7 +308,7 @@ router.post('/submit', async (req, res) => {
     generatedTTLObject.entities = result;
 
     // Tension Extraction
-    result = await requestKgGen(llm, feedbackSystemPrompts[1], `
+    result = await requestKgGen(geminiDetail, feedbackSystemPrompts[1], `
             Setting: ${feedbackSetting}
             Existing Entities: ${settingEntities} and ${generatedTTLObject.entities}
             Feedback: ${feedback}
@@ -315,7 +323,7 @@ router.post('/submit', async (req, res) => {
     generatedTTLObject.tensions = result;
 
     // Validate generated TTL
-    const validatorRes = await validateTTLObject(generatedTTLObject, logFilenames.feedback, llm)
+    const validatorRes = await validateTTLObject(generatedTTLObject, logFilenames.feedback, geminiDetail)
     if (!validatorRes) {
         res.status(200).json({
             error: errorMessages.validationFailed,
@@ -399,9 +407,8 @@ router.post('/pool', async (req, res) => {
     writeToLog(logFilenames.feedback, "Trying to pool results: ", JSON.stringify(req.body));
     const entityPool = req.body.entities;
     const tensionPool = req.body.tensions;
-    const llm = geminiDetail
     // Check if request has all required fields
-    if (!entityPool || !tensionPool || !llm) {
+    if (!entityPool || !tensionPool || !geminiDetail) {
         res.status(200).json({
             error: errorMessages.missingFields,
         });
@@ -417,7 +424,7 @@ router.post('/pool', async (req, res) => {
     writeToLog(logFilenames.feedback, "Starting semantic merging process", '');
 
     // Entity Merge
-    result = await requestKgGen(llm, ttlMergePrompts[0], entityPool, logFilenames.feedback);
+    result = await requestKgGen(geminiDetail, ttlMergePrompts[0], entityPool, logFilenames.feedback);
     if (result === 'error' || result.length === 0) {
         res.status(200).json({
             error: errorMessages.generationFailed,
@@ -427,7 +434,7 @@ router.post('/pool', async (req, res) => {
     generatedTTLObject.entities = result;
 
     // Tension Merge
-    result = await requestKgGen(llm, feedbackSystemPrompts[1], tensionPool, logFilenames.feedback);
+    result = await requestKgGen(geminiDetail, feedbackSystemPrompts[1], tensionPool, logFilenames.feedback);
     if (result === 'error' || result.length === 0) {
         res.status(200).json({
             error: errorMessages.generationFailed,
@@ -437,7 +444,7 @@ router.post('/pool', async (req, res) => {
     generatedTTLObject.tensions = result;
 
     // Validate generated TTL
-    const validatorRes = await validateTTLObject(generatedTTLObject, logFilenames.feedback, llm)
+    const validatorRes = await validateTTLObject(generatedTTLObject, logFilenames.feedback, geminiDetail)
     if (!validatorRes) {
         res.status(200).json({
             error: errorMessages.validationFailed,
