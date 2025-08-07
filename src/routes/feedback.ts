@@ -434,7 +434,11 @@ router.post('/pool', async (req, res) => {
     generatedTTLObject.entities = result;
 
     // Tension Merge
-    result = await requestKgGen(geminiDetail, feedbackSystemPrompts[1], tensionPool, logFilenames.feedback);
+    result = await requestKgGen(geminiDetail,
+        feedbackSystemPrompts[1],
+        `Tensions: ${tensionPool}
+        Entities: ${generatedTTLObject.entities}`,
+        logFilenames.feedback);
     if (result === 'error' || result.length === 0) {
         res.status(200).json({
             error: errorMessages.generationFailed,
