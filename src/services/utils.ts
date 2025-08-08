@@ -63,7 +63,6 @@ export async function requestKgGen(llm: LLM, systemPrompt: string, activityText:
     return parseLLMOutput(await queryGemini(llm.id, systemPrompt, activityText, logFilename));
 }
 
-import { GoogleGenAI } from '@google/genai';
 import 'dotenv/config';
 
 /**
@@ -74,6 +73,7 @@ import 'dotenv/config';
  * @returns message or 'error'
  */
 async function queryGemini(model: string, systemPrompt: string, userPrompt: string, logFilename: string = logFilenames.misc): Promise<string> {
+    const { GoogleGenAI } = await import('@google/genai');
     const gemini = new GoogleGenAI({
         apiKey: process.env.GEMINI_API_KEY,
     });
