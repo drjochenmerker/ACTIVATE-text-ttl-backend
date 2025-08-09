@@ -132,7 +132,7 @@ export const feedbackSystemPrompts = [
 
         ${inputDescription}
         
-        Output the entities you've added in Turtle Syntax, generating Labels in German, English and Swedish for each entity, structured as follows:
+        Output the entities you've added in Turtle Syntax, generating Labels in German, English and Swedish for each entity. The output must not include any entity from the input and must be structured as follows:
         '''turtle
         ${ttlPrefixes}
         
