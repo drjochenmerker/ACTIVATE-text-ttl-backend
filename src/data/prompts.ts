@@ -104,20 +104,13 @@ const inputDescription = `
         ...
     ]
     Feedback: {
-        "role": "nurse",
+        "role": "authorEntityID",
         "data": [
                 {
-                "question": "How do you feel about the interprofessional collaboration simulation you have just completed?",
-                "answer": "- war ruhiger als gestern\n- innerlich weniger angespannt\n- inhaltlich schwieriges Thema\n- zum Schluss unsicher, was ich noch sagen soll"
+                "question": "question that the authorEntityID was asked",
+                "answer": "answer that the authorEntityID gave"
                 },
-                {
-                "question": "Think of a part of the activity that you found very positive, constructive or satisfying. Please describe what happened in this phase in a few sentences.",
-                "answer": "- versucht viel zuzuhören\n- Message gut rübergebracht\n- nach dem relvanten Inhalt versucht über andere, positive Dinge zu reden"
-                },
-                {
-                "question": "Think of a part of the activity that you found very negative, counterproductive or disappointing. Please describe what happened in this phase in a few sentences.",
-                "answer": "- Inhalt schon abgearbeitet, Dozentin hat aber noch nicht geklopft"
-                }
+                ...
             ]
     }
 `
