@@ -27,8 +27,8 @@ export function removeAtLines(text: string): string {
  * Writes the input to a debug log file with a timestamp in root
  */
 import * as fs from 'fs';
-import { LLM } from '../data/types';
-import { logFilenames } from '../data/staticContent';
+import { LLM } from '../data/types.js';
+import { logFilenames } from '../data/staticContent.js';
 export function writeToLog(filename: string, header: string, content: string | object): void {
     // Ensure the logs directory exists
     if (!fs.existsSync('./logs')) {
@@ -64,6 +64,7 @@ export async function requestKgGen(llm: LLM, systemPrompt: string, activityText:
 }
 
 import 'dotenv/config';
+import { GoogleGenAI } from '@google/genai';
 
 /**
  * Generic function to query Gemini
@@ -73,7 +74,6 @@ import 'dotenv/config';
  * @returns message or 'error'
  */
 async function queryGemini(model: string, systemPrompt: string, userPrompt: string, logFilename: string = logFilenames.misc): Promise<string> {
-    const { GoogleGenAI } = await import('@google/genai');
     const gemini = new GoogleGenAI({
         apiKey: process.env.GEMINI_API_KEY,
     });

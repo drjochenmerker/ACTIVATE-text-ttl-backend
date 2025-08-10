@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import feedbackRouter from './feedback';
+import feedbackRouter from './feedback.js';
 
 /**
  * Manages api subroutes

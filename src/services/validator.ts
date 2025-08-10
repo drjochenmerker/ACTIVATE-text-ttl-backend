@@ -6,9 +6,9 @@
  */
 
 import { Parser, Quad } from 'n3'
-import { requestKgGen, writeToLog } from './utils'
-import { LLM } from '../data/types'
-import { ttlSyntaxFixPrompt } from '../data/prompts'
+import { requestKgGen, writeToLog } from './utils.js'
+import { LLM } from '../data/types.js'
+import { ttlSyntaxFixPrompt } from '../data/prompts.js'
 
 type Feedback = {
     warnings: string[]
