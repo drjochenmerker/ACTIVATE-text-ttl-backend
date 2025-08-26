@@ -42,24 +42,24 @@ you will fix those as well. You will not modify any of the given triples, but on
 Output only the fixed Turtle Syntax, without any additional text or explanations. 
 `
 
-
 export const settingGenerationPrompts = [
     `
-        Given a description of a medical simulation, you will generate Turtle Syntax, with Labels in German, English and Swedish.
-        If given a title, you will use it as the ActivityName, otherwise you will generate a title from the description.
+        Given a description of a medical simulation, you will generate a knowledge graph representing the simulation. The output must be valid Turtle Syntax representing the data correctly.
 
-        Refer to the following template that you can expand upon for the output. You must, however,  not introduce any new prefixes:
-        
+        Refer to the following template that you can expand upon for the output. You must, however, not introduce any new prefixes:
         '''turtle
         ${ttlPrefixes}
-    
+        
         :UniqueIdentifier a owl:NamedIndividual ;
-        :ActivityDescription "description"@en ;
+        :ActivityDescription "summarized description"@en ;
         # Other language descriptions
         :ActivityName "name"@en .
         # Other language names
         '''
-    
+
+        Any literals must be given a language tag and always be generated in German, English and Swedish!
+        If given a title as part of the input, you will use it as the ActivityName, otherwise you will generate a fitting title from the description.
+        
         Output only the requested Turtle Syntax, without any additional text or explanations.
     `,
     `
@@ -69,7 +69,7 @@ export const settingGenerationPrompts = [
         If given a default entity, you will add it as a Subject entity and generate fitting labels. 
         If no default entity is given, generate the entity "Instructor" of the type Subject. 
 
-        Output the entities you've added in Turtle Syntax, generating Labels in German, English and Swedish for each entity, structured as follows:
+        Output the entities you've added in Turtle Syntax and always generate Labels in German, English and Swedish for each entity. The output must be structured as follows:
 
         '''turtle
         ${ttlPrefixes}
@@ -141,18 +141,20 @@ export const feedbackSystemPrompts = [
     `
         Given a description of a medical simulation, a list of entities within the simulation and question-answer pairs containing thoughts written down by a participant of the simulation (including their role within), you will extract all important tensions, feedbacks and (self)impressions between/of the entities and write transform them to Turtle Syntax.
 
-        The extracted tensions, feedbacks and impressions must be assigned a unique identifier, the class "Conflict", a title ("ConflictTitle"), a description ("ConflictDescription"), the state ("ConflictState") "open" and an author ("WrittenBy") who must be one of the given entities that initiated the conflict/feedback/impression.
-        If entities are involved in a conflict/feedback/impression, they must be linked with the relation "HasParticipant" with the conflict/feedback/impression as the source entity. A conflict/feedback/impression must not have participants from more than three classes. If the participants belong to exactly three classes, the classes may only be from one of the following combinations: (Subject,Instrument, Object), (Subject, Rule, Community), (Object, Community, DivisionOfLabour) or (Subject, Object, Community). Other combinations of three classes are not allowed! Make sure to never break this rule.  If the participants belong to just one or two classes, the classes may be chosen freely.   
+        The extracted tensions, feedbacks and impressions must be assigned a unique identifier, the class "Conflict", a title ("ConflictTitle"), a description ("ConflictDescription"), the state ("ConflictState") "open" and an author ("WrittenBy") who must be one of the given entities that initiated the tension/feedback/impression.
+        If entities are involved in a tension/feedback/impression, they must be linked with the relation "HasParticipant" with the tension/feedback/impression as the source entity. A tension/feedback/impression must not have participants from more than three classes. If the participants belong to exactly three classes, the classes may only be from one of the following combinations: (Subject,Instrument, Object), (Subject, Rule, Community), (Object, Community, DivisionOfLabour) or (Subject, Object, Community). Other combinations of three classes are not allowed! Make sure to never break this rule.  If the participants belong to just one or two classes, the classes may be chosen freely.   
 
-        If other entities respond to a conflict/feedback/impression, they must be linked by creating a new entity of the "Comment" class and linked to the conflict/feedback/impression with the relation "HasComment".
-        The comment must have a unique identifier a description which must not be a direct quote ("CommentDescription") and an author ("WrittenBy") who must be one of the entities that responded to the conflict/feedback/impression. The comments may have further comments which must also be linked in the same way using "HasComment".
+        If other entities respond to a tension/feedback/impression, they must be linked by creating a new entity of the "Comment" class and linked to the tension/feedback/impression with the relation "HasComment".
+        The comment must have a unique identifier a description which must not be a direct quote ("CommentDescription") and an author ("WrittenBy") who must be one of the entities that responded to the tension/feedback/impression. The comments may have further comments which must also be linked in the same way using "HasComment".
 
-        You must also always keep track which question-answer pair you extracted the conflict/feedback/(self)impression from and each conflict/feedback/(self)impression and comment must be marked as ai geneerated. 
+        You must also always keep track which question-answer pair you extracted the tension/feedback/(self)impression from and each tension/feedback/(self)impression and comment must be marked as ai generated. 
+
+        Depending on the content of the extracted tension/feedback/impression, the intent must be derived. You may only use the following three intents: ":Negative", ":Positive" and ":Neutral".
 
         ${inputDescription}
         Timestamp: "Timestamp of the feedback (Example: 2024-06-01T12:30:00Z)"
         
-        Output the tensions/feedbacks/impressions in the following format, generating titles and descriptions in German, English and Swedish for each conflict/feedback/(self)impression:
+        Output the tensions/feedbacks/impressions in the following format, generating titles and descriptions in German, English and Swedish for each tension/feedback/(self)impression:
 
         '''turtle
         ${ttlPrefixes}
@@ -167,7 +169,8 @@ export const feedbackSystemPrompts = [
         # Other language authors;
         :HasParticipant :EntityIDs ;
         :CreationDate "Timestamp" ;
-        :isAI true ;
+        :IsAI true ;
+        :HasIntent :Intent ;
         :Origin: "Question and Answer of source as rdf:json" .
 
         :CommentID a :Comment ;
@@ -176,7 +179,7 @@ export const feedbackSystemPrompts = [
         :WrittenBy :Entity ;
         # Other language authors
         :CreationDate "Timestamp" ;
-        :isAI true ;
+        :IsAI true ;
         :Origin: "Question and Answer of source as rdf:json" .
 
         :ConflictIDorCommentID :HasComment :CommentID .
@@ -191,11 +194,12 @@ export const ttlMergePrompts = [
         Given multiple Turtle Syntax inputs containing entities acting in a simulation scenario, you will merge them into one Turtle Syntax output. Do not concatenate the inputs, but merge them by combining the triples semantically and ensuring that there are no triples with duplicate meanings in the output.
 
         No new prefixes may be used.
+        During this merging process no information must be lost!
         ${ttlOnlyInstruction}
     `,
     `
-        Given multiple Turtle Syntax inputs containing conflicts and entities defined in Turtle Syntrax as well, you will merge them into one Turtle Syntax output. Do not concatenate the inputs, but merge them by semantically by combining the conflicts and comments. Make sure that there are no conflicts with semantically duplicate content in the output.
-        If two conflicts/comments can be merged into one conflict or comment, you must list both original author entities using the "WrittenBy" predicate. Also generate a new title and description based on the merged content. Make sure to merge the participants as well. 
+        Given multiple Turtle Syntax inputs containing conflicts and entities defined in Turtle Syntax as well, you will merge them into one Turtle Syntax output. Do not concatenate the inputs, but merge them by semantically by combining the conflicts and comments. Make sure that there are no conflicts with semantically duplicate content in the output.
+        If two tensions/comments can be merged into one conflict or comment, you must list both original author entities using the "WrittenBy" predicate. Also generate a new title and description based on the merged content. Make sure to merge the participants as well. 
 
         All referenced entities using "WrittenBy" and "HasParticipant" must be present in the defined entities given in the input but not redefined in the final output. 
 
@@ -210,6 +214,7 @@ export const ttlMergePrompts = [
         Entities: "ttl"
 
         No new prefixes may be used. 
+        Merge as many tensions/comments as possible without combining anything that isn't semantically similar. During this merging process no information must be lost!
         ${ttlOnlyInstruction}
     `
 ]
