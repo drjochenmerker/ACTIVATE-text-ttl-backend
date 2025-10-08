@@ -10,7 +10,7 @@ import { setupSocketIO } from './socket.js';
 const app = express();
 app.use(express.json());
 const server = createServer(app);
-server.setTimeout(400000); // TODO: currently set to 5+ minutes
+server.setTimeout(300000); // TODO: set to 5 minutes
 const port = process.env.BACKEND_PORT || 8500;
 
 // Swagger Setup
