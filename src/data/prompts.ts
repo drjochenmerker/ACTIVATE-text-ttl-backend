@@ -66,7 +66,27 @@ export const settingGenerationPrompts = [
         Given a description of a medical simulation, you will extract all entities present and assign them one or multiple of the following classes according to their context in the given situation:
         ${classExplanation}
 
-        You will however, always and without exeption add at least the following entities of the class "Subject": "Pflege01" (Care Staff), "Pflege02", "Arzt01" (Physician), "Arzt02", and "Physiotherapeut01" (Physiotherapist), "Physiotherapeut02".
+        However, you will always create 20 instances of the “Subject” class. Crucially, these instances must be named exactly as listed below, using the entity type followed by a numerical suffix (01, 02, 03, or 04).
+            - Physician 01
+            - Physician 02
+            - Physician 03
+            - Physician 04
+            - Nurse 01
+            - Nurse 02
+            - Nurse 03
+            - Nurse 04
+            - Occupational Therapist 01
+            - Occupational Therapist 02
+            - Occupational Therapist 03
+            - Occupational Therapist 04
+            - Physiotherapist 01
+            - Physiotherapist 02
+            - Physiotherapist 03
+            - Physiotherapist 04
+            - Pharmacist 01
+            - Pharmacist 02
+            - Pharmacist 03
+            - Pharmacist 04
 
         If given a default entity, you will add it as a Subject entity and generate fitting labels. 
         If no default entity is given, generate the entity "Instructor" of the type Subject. 
