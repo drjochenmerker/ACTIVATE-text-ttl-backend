@@ -21,6 +21,7 @@
         "@google/genai": "^0.15.0",
         "dotenv": "^16.5.0",
         "express": "^5.1.0",
+        "http-proxy-middleware": "^3.0.5",
         "n3": "^1.26.0",
         "ollama": "^0.5.15",
         "openai": "^4.100.0",
