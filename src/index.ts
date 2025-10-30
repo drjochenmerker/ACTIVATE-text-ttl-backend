@@ -12,7 +12,7 @@ import { createProxyMiddleware } from 'http-proxy-middleware';
 const app = express();
 app.use(express.json());
 const server = createServer(app);
-const port = process.env.BACKEND_PORT || 8500;
+const port = process.env.BACKEND_PORT || 8500; // Behält Ihren Port bei
 
 // Swagger Setup
 const swaggerSpec = swaggerJsdoc({
@@ -31,64 +31,75 @@ const swaggerSpec = swaggerJsdoc({
 // Middleware
 app.use(
     cors({
+        // Ihre CORS-Einstellungen beibehalten
         origin: `${process.env.ACTIVATE_URL}${!process.env.ACTIVATE_PORT ? '' : ':' + process.env.ACTIVATE_PORT}`,
         methods: ['GET', 'POST'],
         credentials: true,
     })
 );
 
-// Rate Limiter -- 1 Minute, 250 requests
+// Rate Limiter -- Beibehalten
 app.use(
     rateLimit({
         windowMs: 1 * 60 * 1000,
         limit: 250,
-        standardHeaders: 'draft-8',
+        standardHeaders: 'draft-8', // Empfohlen statt 'true'
         legacyHeaders: false,
         message: 'Too many requests, please try again later.',
     })
 );
-// --- NEUER PROXY FÜR DAS WHISPER-BACKEND ---
-// Diese Regel fängt Anfragen an '/api/diarize' ab, BEVOR sie 'apiRouter' erreichen.
-// Sie leitet sie an den Python-Server weiter, der auf Port 8001 läuft.
+
+// --- *** GEÄNDERTER PROXY FÜR DAS WHISPER-BACKEND *** ---
+// Diese Regel fängt jetzt Anfragen an '/whisper-proxy' ab.
 interface PathRewriteMap {
     [key: string]: string;
 }
 
-type ProxyOnError = (err: Error, req: express.Request, res: express.Response) => void;
+type ProxyOnError = (err: Error, req: express.Request, res: express.Response | any) => void; // any hinzugefügt für res.status().send()
 
 interface DiarizeProxyOptions {
     target: string;
     changeOrigin?: boolean;
     pathRewrite?: PathRewriteMap;
     onError?: ProxyOnError;
+    logLevel?: 'debug' | 'info' | 'warn' | 'error' | 'silent'; // Für Debugging hinzugefügt
 }
 
 const diarizeProxyOptions: DiarizeProxyOptions = {
-    target: 'http://localhost:8001', // TODO Die Adresse des Python-Servers (Port aus package.json)
+    target: 'http://localhost:8001', // Ziel bleibt der Python-Server auf Port 8001
     changeOrigin: true,
     pathRewrite: {
-        '^/api/diarize': '', // Schreibt /api/diarize/api/diarize... zu /api/diarize... um
+        '^/whisper-proxy': '', // Schreibt /whisper-proxy/api/diarize... zu /api/diarize... um
     },
     onError: (err, req, res) => {
-        console.error("Proxy-Fehler:", err);
-        res.status(500).send('Proxy Error: Konnte den Python-Dienst nicht erreichen.');
+        console.error("Proxy Error:", err);
+        // Sicherstellen, dass res eine send-Methode hat (typischerweise der Fall bei Express)
+        if (res && typeof res.status === 'function' && typeof res.send === 'function') {
+             res.status(500).send('Proxy Error: Could not reach Python service.');
+        } else {
+             // Fallback, falls res kein erwartetes Response-Objekt ist
+             console.error("Proxy Error: Response object is not valid.");
+        }
     },
+    logLevel: 'debug', // Mehr Logging vom Proxy, um zu sehen, was passiert
 };
 
 app.use(
-    '/api/diarize', // Der Pfad, den Ihr Frontend aufruft (z.B. /api/diarize/api/diarize_and_transcribe)
+    '/whisper-proxy', // *** NEUER PFAD *** Der Pfad, den Ihr Frontend aufruft
     createProxyMiddleware(diarizeProxyOptions)
 );
 // --- ENDE DES PROXY-ABSCHNITTS ---
 
-// API Endpoints
+// API Endpoints - Diese kommen NACH dem spezifischeren Proxy
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-app.use('/api', apiRouter);
+app.use('/api', apiRouter); // Ihr allgemeiner API-Router
 
 // Start Server and Socket.IO
 setupSocketIO(server);
 server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}`);
     console.log(`Swagger docs available at http://localhost:${port}/docs`);
-     console.log(`Proxying /api/diarize requests to http://localhost:8001`); // todo
+    // Angepasste Log-Nachricht
+    console.log(`Proxying /whisper-proxy requests to http://localhost:8001`);
 });
+
