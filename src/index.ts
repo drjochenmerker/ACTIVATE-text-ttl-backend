@@ -6,8 +6,8 @@ import { rateLimit } from 'express-rate-limit';
 import cors from 'cors';
 import { createServer } from 'node:http';
 import { setupSocketIO } from './socket.js';
+import audioRouter from './routes/audio.js';
 
-import { createProxyMiddleware } from 'http-proxy-middleware';
 
 const app = express();
 app.use(express.json());
@@ -38,7 +38,7 @@ app.use(
     })
 );
 
-// Rate Limiter -- Beibehalten
+// Rate Limiter
 app.use(
     rateLimit({
         windowMs: 1 * 60 * 1000,
@@ -49,50 +49,14 @@ app.use(
     })
 );
 
-// --- *** GEÄNDERTER PROXY FÜR DAS WHISPER-BACKEND *** ---
-// Diese Regel fängt jetzt Anfragen an '/whisper-proxy' ab.
-interface PathRewriteMap {
-    [key: string]: string;
-}
-
-type ProxyOnError = (err: Error, req: express.Request, res: express.Response | any) => void; // any hinzugefügt für res.status().send()
-
-interface DiarizeProxyOptions {
-    target: string;
-    changeOrigin?: boolean;
-    pathRewrite?: PathRewriteMap;
-    onError?: ProxyOnError;
-    logLevel?: 'debug' | 'info' | 'warn' | 'error' | 'silent'; // Für Debugging hinzugefügt
-}
-
-const diarizeProxyOptions: DiarizeProxyOptions = {
-    target: 'http://localhost:8001', // Ziel bleibt der Python-Server auf Port 8001
-    changeOrigin: true,
-    pathRewrite: {
-        '^/whisper-proxy': '', // Schreibt /whisper-proxy/api/diarize... zu /api/diarize... um
-    },
-    onError: (err, req, res) => {
-        console.error("Proxy Error:", err);
-        // Sicherstellen, dass res eine send-Methode hat (typischerweise der Fall bei Express)
-        if (res && typeof res.status === 'function' && typeof res.send === 'function') {
-             res.status(500).send('Proxy Error: Could not reach Python service.');
-        } else {
-             // Fallback, falls res kein erwartetes Response-Objekt ist
-             console.error("Proxy Error: Response object is not valid.");
-        }
-    },
-    logLevel: 'debug', // Mehr Logging vom Proxy, um zu sehen, was passiert
-};
-
-app.use(
-    '/whisper-proxy', // *** NEUER PFAD *** Der Pfad, den Ihr Frontend aufruft
-    createProxyMiddleware(diarizeProxyOptions)
-);
-// --- ENDE DES PROXY-ABSCHNITTS ---
-
-// API Endpoints - Diese kommen NACH dem spezifischeren Proxy
+// API Endpoints 
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-app.use('/api', apiRouter); // Ihr allgemeiner API-Router
+
+// listens on '/api/process-audio-session'
+// needs to be before the general apiRouter in case of overlaps
+app.use('/api', audioRouter);
+
+app.use('/api', apiRouter);
 
 // Start Server and Socket.IO
 setupSocketIO(server);
@@ -100,6 +64,6 @@ server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}`);
     console.log(`Swagger docs available at http://localhost:${port}/docs`);
     // Angepasste Log-Nachricht
-    console.log(`Proxying /whisper-proxy requests to http://localhost:8001`);
+    console.log(`Audio processing endpoint active at http://localhost:${port}/api/process-audio-session`);
 });
 
