@@ -3,156 +3,292 @@ import multer from 'multer';
 import axios from 'axios';
 import FormData from 'form-data';
 import { Readable } from 'stream';
+import fs from 'fs'; // Dateisystem
+import os from 'os'; // Temporäres Verzeichnis
+import path from 'path'; // Pfad-Tools
+import { exec } from 'child_process'; // Für FFmpeg
+import crypto from 'crypto'; // Für Job-IDs
 
-// Importieren Sie Ihre Gemini-Aufruffunktion (Pfad muss ggf. angepasst werden)
-// .js ist wichtig, wenn "type": "module" in package.json steht
-import { callGeminiAPI } from '../services/geminiMapper.js'; 
+// Importieren Sie Ihre Gemini-Aufruffunktion
+import { callGeminiAPI } from '../services/geminiMapper.js';
+// import DiarizedSegment from '../data/knowledge_graph/transcribe_utils.ts';
 
 const router = express.Router();
 
-// --- Multer-Setup ---
-// Speichert die Datei temporär im Speicher (RAM)
-const storage = multer.memoryStorage();
-const upload = multer({ 
-    storage: storage,
-    limits: { fileSize: 100 * 1024 * 1024 } // Limit auf 100MB (für lange Audio-Dateien)
+// --- Job-Speicher (In-Memory) ---
+// In einer echten Produktion würden Sie hier Redis oder eine DB verwenden
+type JobStatus =
+    | { status: 'processing'; progress: number; message: string }
+    | { status: 'complete'; data: any } // 'data' ist hier das finale DiarizationSuccessResult
+    | { status: 'error'; message: string };
+
+const jobStore = new Map<string, JobStatus>();
+
+// --- Multer-Setup (WICHTIG: Auf Festplatte speichern) ---
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, os.tmpdir()); // Speichere im temporären Verzeichnis des Systems
+    },
+    filename: (req, file, cb) => {
+        cb(null, `upload-${Date.now()}-${file.originalname}`);
+    }
 });
+const upload = multer({
+    storage: storage,
+    limits: { fileSize: 2 * 1024 * 1024 * 1024 } // 2 GB Limit
+});
+
+// --- API Endpunkte ---
 
 /**
  * @route POST /api/process-audio-session
- * @description Empfängt eine Audiodatei und eine Rollenliste.
- * 1. Leitet die Datei an das Python-Backend (Whisper auf Port 8001) weiter.
- * 2. Empfängt das diariserte Transkript (mit speaker_00).
- * 3. Ruft Gemini auf, um die Sprecher den Rollen zuzuordnen (Ihr Plan).
- * 4. Sendet das finale, zugeordnete Transkript an das Frontend zurück.
+ * NIMMT den Job entgegen, gibt eine Job-ID zurück und startet die Verarbeitung
+ * im Hintergrund.
  */
 router.post(
     '/process-audio-session',
-    upload.single('audio_file'), // 'audio_file' muss der Feldname im FormData sein
+    upload.single('audio_file'),
     async (req, res) => {
         
         console.log("Node-Backend: /process-audio-session aufgerufen.");
 
         try {
-            // --- 1. Daten aus der Anfrage extrahieren ---
             const audioFile = req.file;
             const languageCode = req.body.language_code || null;
-            let roles: string[] = [];
-            
-            try {
-                 // 'roles' wird als JSON-String im FormData erwartet
-                 roles = JSON.parse(req.body.roles || '[]');
-            } catch (e) {
-                 console.error("Konnte 'roles'-Array nicht parsen:", req.body.roles);
-                 return res.status(400).json({ success: false, message: "Ungültiges 'roles'-Format. Muss ein JSON-Array-String sein." });
-            }
+            let roles: string[] = JSON.parse(req.body.roles || '[]');
 
             if (!audioFile) {
-                return res.status(400).json({ success: false, message: "Keine 'audio_file' im FormData gefunden." });
+                res.status(400).json({ success: false, message: "Keine 'audio_file' gefunden." });
+                return;
             }
 
-            // --- 2. Schritt A: Python-Backend (Whisper) aufrufen ---
-            // Ziel: Port 8001 (aus Ihrer package.json -> start-whisper)
-            const pythonApiUrl = 'http://localhost:8001/api/diarize_and_transcribe';
-            
-            const formData = new FormData();
-            
-            // Konvertiere den Buffer von Multer in einen Stream, den FormData senden kann
-            const bufferStream = new Readable();
-            bufferStream.push(audioFile.buffer);
-            bufferStream.push(null);
+            // Job-ID erstellen
+            const jobId = crypto.randomUUID();
+            const jobData = {
+                filePath: audioFile.path, // Pfad zur temporären Datei auf der Festplatte
+                originalName: audioFile.originalname,
+                languageCode: languageCode,
+                roles: roles
+            };
 
-            // Füge die Datei zum Formular hinzu
-            formData.append('audio_file', bufferStream, {
-                filename: audioFile.originalname, // Wichtig für die Dateityp-Prüfung im Python-Backend
-                contentType: audioFile.mimetype,
-            });
-            
-            if (languageCode) {
-                 formData.append('language_code', languageCode);
-            }
+            // Job im Store speichern
+            jobStore.set(jobId, { status: 'processing', progress: 0, message: 'Job gestartet...' });
 
-            console.log(`Node-Backend: Sende Audio (${(audioFile.size / 1024 / 1024).toFixed(2)} MB) an Python-Server (${pythonApiUrl})...`);
-            
-            const pythonResponse = await axios.post(
-                pythonApiUrl,
-                formData,
-                { 
-                    headers: formData.getHeaders(),
-                    maxContentLength: Infinity, // Wichtig für große Uploads
-                    maxBodyLength: Infinity
-                }
-            );
+            // SOFORT an das Frontend antworten
+            res.status(202).json({ job_id: jobId }); // 202 = Accepted
 
-            // Das Ergebnis vom Python-Server (mit speaker_0, speaker_1...)
-            const diarizationResult = pythonResponse.data;
-
-            if (diarizationResult.status !== 'success') {
-                 // Fehler vom Python-Dienst abfangen
-                 throw new Error(`Python-Dienst meldete einen Fehler: ${diarizationResult.detail || diarizationResult.message || 'Unbekannter Python-Fehler'}`);
-            }
-            
-            console.log("Node-Backend: Transkription von Python empfangen.");
-
-            // --- 3. Schritt B: Gemini-Backend (Rollen-Mapping) aufrufen ---
-            
-            // 3.1: Transkript konsolidieren (wie in Ihrem Plan beschrieben)
-            const speakerTextMap: { [key: string]: string } = {};
-            for (const segment of diarizationResult.diarized_transcription) {
-                const speaker = segment.speaker; // z.B. "SPEAKER_00"
-                if (!speakerTextMap[speaker]) {
-                    speakerTextMap[speaker] = "";
-                }
-                speakerTextMap[speaker] += segment.text + " ";
-            }
-
-            console.log("Node-Backend: Rufe Gemini für Rollen-Mapping auf...");
-
-            // 3.2: Gemini aufrufen (diese Funktion muss in 'geminiMapper.ts' existieren)
-            const roleMapping = await callGeminiAPI(speakerTextMap, roles);
-            
-            console.log("Node-Backend: Rollen-Mapping von Gemini empfangen:", roleMapping);
-
-            // 3.3: Erstelle eine Zuordnungstabelle (Map) für einfachen Zugriff
-            const speakerRoleMap = new Map<string, string>();
-            roleMapping.forEach(mapping => {
-                speakerRoleMap.set(mapping.speaker_id, mapping.role);
-            });
-
-            // --- 4. Schritt C: Ergebnisse zusammenführen ---
-            // Ersetze 'SPEAKER_00' durch die zugeordnete Rolle
-            const finalTranscription = diarizationResult.diarized_transcription.map((segment: any) => {
-                const assignedRole = speakerRoleMap.get(segment.speaker);
-                return {
-                    ...segment,
-                    // Ersetze 'SPEAKER_00' durch 'Lehrperson (SPEAKER_00)' für Klarheit
-                    speaker: assignedRole ? `${assignedRole} (${segment.speaker})` : segment.speaker,
-                };
-            });
-
-            // --- 5. Schritt D: Antwort an das Frontend senden ---
-            res.status(200).json({
-                status: "success",
-                detected_language: diarizationResult.detected_language,
-                diarized_transcription: finalTranscription, // Das zugeordnete Transkript
-                total_duration_s: diarizationResult.total_duration_s,
-                role_mapping: roleMapping, // Die Zuordnungstabelle für Debugging/Anzeige
-                processing_times_s: diarizationResult.processing_times_s // Verarbeitungszeiten weiterleiten
-            });
+            // Verarbeitung im Hintergrund starten (OHNE await)
+            processAudioInBackground(jobId, jobData);
 
         } catch (error: any) {
-            console.error("Fehler im Orchestrierungs-Endpunkt /process-audio-session:", error.message);
-            
-            // Fehler vom Python-Server oder Gemini weiterleiten
-            if (error.response) {
-                console.error("Fehlerdetails (von Sub-Request):", error.response.data);
-                return res.status(error.response.status || 500).json(error.response.data);
-            }
-            
-            // Allgemeiner Fehler
-            res.status(500).json({ success: false, message: "Internal Server Error in Orchestrator", detail: error.message });
+            console.error("Fehler bei der Job-Annahme:", error.message);
+            res.status(500).json({ success: false, message: "Fehler bei der Job-Annahme.", detail: error.message });
         }
     }
 );
+
+/**
+ * @route GET /api/job-status/:job_id
+ * WIRD vom Frontend wiederholt aufgerufen (Polling), um den Status abzufragen.
+ */
+router.get('/job-status/:job_id', (req, res) => {
+    const jobId = req.params.job_id;
+    const job = jobStore.get(jobId);
+
+    if (!job) {
+        res.status(404).json({ status: 'error', message: 'Job nicht gefunden.' });
+        return;
+    }
+
+    // Wenn der Job fertig ist, senden wir die Daten und löschen den Job aus dem Speicher
+    if (job.status === 'complete' || job.status === 'error') {
+        jobStore.delete(jobId); 
+    }
+
+    res.status(200).json(job);
+});
+
+// --- Hintergrund-Verarbeitung (Die eigentliche Arbeit) ---
+
+interface JobData {
+    filePath: string;
+    originalName: string;
+    languageCode: string | null;
+    roles: string[];
+}
+
+/**
+ * Führt die gesamte (langsame) Verarbeitungs-Pipeline im Hintergrund aus.
+ */
+async function processAudioInBackground(jobId: string, jobData: JobData) {
+    const { filePath, originalName, languageCode, roles } = jobData;
+    const allFinalSegments: any[] = [];
+    let totalDuration = 0;
+    let detectedLanguage = languageCode || 'unknown';
+
+    // Temporäres Verzeichnis für Chunks erstellen
+    const chunkDir = path.join(os.tmpdir(), `job-${jobId}`);
+    try {
+        await fs.promises.mkdir(chunkDir);
+
+        jobStore.set(jobId, { status: 'processing', progress: 10, message: 'Audio wird aufgeteilt...' });
+
+        // --- 1. Audio in Chunks aufteilen (z.B. 5 Minuten / 300 Sekunden) ---
+        const chunkFiles = await splitAudioWithFFmpeg(filePath, chunkDir, 300);
+        const totalChunks = chunkFiles.length;
+        console.log(`Job ${jobId}: Audio in ${totalChunks} Chunks aufgeteilt.`);
+
+        // --- 2. Chunks nacheinander verarbeiten ---
+        for (let i = 0; i < totalChunks; i++) {
+            const chunkFile = chunkFiles[i];
+            const progress = 10 + Math.round((i / totalChunks) * 80); // 10% -> 90%
+            jobStore.set(jobId, { status: 'processing', progress: progress, message: `Transkribiere Teil ${i + 1} von ${totalChunks} (KI-Verarbeitung läuft...)` });
+
+            // --- 3. Python-Backend aufrufen (Transkription & Diarisierung) ---
+            const diarizationResult = await callPythonBackend(chunkFile.path, languageCode);
+            
+            if (i === 0) { // Sprache nur vom ersten Chunk nehmen
+                detectedLanguage = diarizationResult.detected_language;
+                totalDuration = 0; // Wir summieren die Dauer
+            }
+            totalDuration += diarizationResult.total_duration_s;
+
+            // --- 4. Gemini-Backend aufrufen (Rollen-Mapping) ---
+            const speakerTextMap = consolidateSpeakerText(diarizationResult.diarized_transcription);
+            const roleMapping = await callGeminiAPI(speakerTextMap, roles);
+            const speakerRoleMap = new Map<string, string>();
+            roleMapping.forEach(m => speakerRoleMap.set(m.speaker_id, m.role));
+
+            // --- 5. Ergebnisse zusammenführen ---
+            const timeOffset = chunkFile.startTime; // Zeit-Offset für diesen Chunk
+            const mappedSegments = mapSegments(diarizationResult.diarized_transcription, speakerRoleMap, timeOffset);
+            allFinalSegments.push(...mappedSegments);
+        }
+
+        // --- 6. Job als "abgeschlossen" markieren ---
+        jobStore.set(jobId, {
+            status: 'complete',
+            data: {
+                status: "success",
+                detected_language: detectedLanguage,
+                diarized_transcription: allFinalSegments,
+                total_duration_s: totalDuration,
+                // (processing_times_s wird hier weggelassen, da es pro Chunk war)
+            }
+        });
+        console.log(`Job ${jobId}: Erfolgreich abgeschlossen.`);
+
+    } catch (error: any) {
+        console.error(`Job ${jobId}: FEHLER bei der Hintergrundverarbeitung:`, error.message);
+        jobStore.set(jobId, { status: 'error', message: error.message || "Unbekannter Verarbeitungsfehler." });
+    
+    } finally {
+        // --- 7. Aufräumen ---
+        fs.unlink(filePath, (err) => { // Original-Upload löschen
+            if (err) console.error(`Job ${jobId}: Konnte Upload-Datei nicht löschen: ${filePath}`, err);
+        });
+        fs.rm(chunkDir, { recursive: true, force: true }, (err) => { // Chunk-Ordner löschen
+            if (err) console.error(`Job ${jobId}: Konnte Chunk-Ordner nicht löschen: ${chunkDir}`, err);
+        });
+    }
+}
+
+// --- Hilfsfunktionen für die Hintergrundverarbeitung ---
+
+/**
+ * Ruft FFmpeg auf, um eine Audiodatei in Segmente zu zerlegen.
+ * Gibt eine Liste von Dateipfaden und deren Startzeiten zurück.
+ */
+function splitAudioWithFFmpeg(inputFile: string, outputDir: string, segmentTimeSec: number): Promise<{ path: string; startTime: number }[]> {
+    return new Promise((resolve, reject) => {
+        const outputPattern = path.join(outputDir, 'chunk-%03d.wav'); // Erzeugt chunk-000.wav, chunk-001.wav, ...
+        // -f segment: Teilt die Datei
+        // -segment_time: Dauer jedes Chunks
+        // -c copy: Kopiert den Audio-Codec (schnell), WENN das Format .wav ist.
+        // Falls Sie .webm/.mp3 erlauben, müssen Sie '-c:a pcm_s16le' verwenden, um zu WAV zu konvertieren.
+        // Da wir im Frontend zu WAV konvertieren, ist 'copy' sicher.
+        const command = `ffmpeg -i "${inputFile}" -f segment -segment_time ${segmentTimeSec} -c copy "${outputPattern}"`;
+
+        exec(command, (error, stdout, stderr) => {
+            if (error) {
+                console.error('FFmpeg-Fehler (split):', stderr);
+                return reject(new Error(`FFmpeg-Fehler beim Aufteilen der Datei: ${stderr}`));
+            }
+            
+            // Finde die erstellten Dateien
+            fs.readdir(outputDir, (err, files) => {
+                if (err) return reject(err);
+                const chunkFiles = files
+                    .filter(f => f.startsWith('chunk-') && f.endsWith('.wav'))
+                    .map((file, index) => ({
+                        path: path.join(outputDir, file),
+                        startTime: index * segmentTimeSec // Zeit-Offset
+                    }));
+                resolve(chunkFiles);
+            });
+        });
+    });
+}
+
+/**
+ * Ruft das Python-Backend für einen einzelnen Chunk auf.
+ */
+async function callPythonBackend(filePath: string, languageCode: string | null): Promise<any> {
+    const pythonApiUrl = 'http://localhost:8001/api/diarize_and_transcribe';
+    const formData = new FormData();
+    const fileStream = fs.createReadStream(filePath);
+
+    formData.append('audio_file', fileStream, {
+        filename: path.basename(filePath), // z.B. chunk-001.wav
+        contentType: 'audio/wav',
+    });
+    if (languageCode) {
+         formData.append('language_code', languageCode);
+    }
+
+    const pythonResponse = await axios.post(
+        pythonApiUrl,
+        formData,
+        { 
+            headers: formData.getHeaders(),
+            timeout: 30 * 60 * 1000 // 30 Min. Timeout pro Chunk
+        }
+    );
+    
+    if (pythonResponse.data.status !== 'success') {
+         throw new Error(`Python-Dienst meldete Fehler für Chunk ${filePath}: ${pythonResponse.data.message}`);
+    }
+    return pythonResponse.data;
+}
+
+/**
+ * Konsolidiert Text für Gemini (bleibt gleich).
+ */
+function consolidateSpeakerText(transcription: any[]): { [key: string]: string } {
+    const speakerTextMap: { [key: string]: string } = {};
+    for (const segment of transcription) {
+        const speaker = segment.speaker;
+        if (!speakerTextMap[speaker]) speakerTextMap[speaker] = "";
+        speakerTextMap[speaker] += segment.text + " ";
+    }
+    return speakerTextMap;
+}
+
+/**
+ * Wendet das Rollen-Mapping an und korrigiert Zeitstempel basierend auf dem Chunk-Offset.
+ */
+function mapSegments(transcription: any[], speakerRoleMap: Map<string, string>, timeOffset: number): any[] {
+     return transcription.map((segment: any) => {
+        const assignedRole = speakerRoleMap.get(segment.speaker);
+        return {
+            ...segment,
+            speaker: assignedRole ? `${assignedRole} (${segment.speaker})` : segment.speaker,
+            // Zeitstempel korrigieren
+            start: segment.start + timeOffset,
+            end: segment.end + timeOffset,
+        };
+    });
+}
+
 
 export default router;
