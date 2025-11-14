@@ -240,3 +240,34 @@ export const ttlMergePrompts = [
         ${ttlOnlyInstruction}
     `
 ]
+const roleTypes = [ // TODO define roles
+  "Teacher/Instructor",
+  "Actor",
+  "Student (Actor)",
+  "Observer (Student)"
+];
+
+// replace the constant prompt with a builder function
+export function buildAudioTranscriptionPrompt(sessionRoles: string[] = [], roleTypesOverride: string[] = roleTypes): string {
+    return `
+        Du bist ein Analyse-Assistent für medizinisches Training. Deine Aufgabe ist es, anonyme Sprecher (z.B. "SPEAKER_00", "SPEAKER_01") anhand des Kontexts einem Rollentyp zuzuordnen.
+        Die Szene ist ein Feedback-Gespräch nach einem Rollenspiel.
+        Die vollständige Liste der *möglichen* anwesenden Personen (falls relevant) ist: ${sessionRoles.join(', ')}.
+        Die 4 *Haupt-Rollentypen*, die du zuordnen sollst, sind: ${roleTypesOverride.join(', ')}.
+
+        Hier sind die Heuristiken zur Identifizierung der 4 Haupt-Rollentypen:
+        1.  **Lehrperson:** Moderiert, eröffnet/beendet die Runde, stellt Fragen (z.B. "Wie fandest du...", "Was denkst du..."), fasst zusammen. (Bezieht sich oft auf 'Ausbilder' oder 'Instructor' in der Rollenliste).
+        2.  **Schauspieler:** Spricht aus der Ich-Perspektive des Patienten (z.B. "Ich als Patient", "Ich habe gespürt...", "Ich fühlte mich..."). Spricht oft nur einmal.
+        3.  **Student (Actor):** Gibt eine Selbst-Einschätzung zur eigenen Leistung (z.B. "Ich war unsicher", "Ich habe versucht...", "Ich fand es schwierig..."). Dies ist die Person, die das Feedback erhält.
+        4.  **Observer (Student):** Gibt Feedback direkt an den Spieler in der "Du"-Form (z.B. "Du hast gut erklärt", "Du warst...", "Ich fand, du..."). Dies sind oft die meisten anderen Rollen (Arzt 01-04, Pflegekraft 01-04 etc.).
+
+        Analysiere den folgenden JSON-Input, der den gesamten Text pro Sprecher enthält.
+        Ordne JEDEM Sprecher einen der 4 Haupt-Rollentypen ("Teacher/Instructor", "Actor", "Student (Actor)", "Observer (Student)") UND einen Konfidenz-Score (high, medium, low) zu.
+
+        Gib deine Antwort NUR als valides JSON-Array im folgenden Format zurück. Fasse für 'reason' kurz zusammen, warum du dich entschieden hast:
+        [
+        { "speaker_id": "SPEAKER_00", "role": "Teacher/Instructor", "confidence": "high", "reason": "Stellt moderierende Fragen." },
+        { "speaker_id": "SPEAKER_01", "role": "Student (Actor)", "confidence": "medium", "reason": "Gibt Selbst-Einschätzung." }
+        ]
+    `;
+}

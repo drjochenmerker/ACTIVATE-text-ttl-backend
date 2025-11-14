@@ -2,16 +2,12 @@ import express from 'express';
 import multer from 'multer';
 import axios from 'axios';
 import FormData from 'form-data';
-import { Readable } from 'stream';
-import fs from 'fs'; // Dateisystem
-import os from 'os'; // Temporäres Verzeichnis
-import path from 'path'; // Pfad-Tools
-import { exec } from 'child_process'; // Für FFmpeg
-import crypto from 'crypto'; // Für Job-IDs
-
-// Importieren Sie Ihre Gemini-Aufruffunktion
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
+import { exec } from 'child_process';
+import crypto from 'crypto';
 import { callGeminiAPI } from '../services/geminiMapper.js';
-// import DiarizedSegment from '../data/knowledge_graph/transcribe_utils.ts';
 
 const router = express.Router();
 

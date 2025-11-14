@@ -1,3 +1,6 @@
+import 'dotenv/config';
+import { GoogleGenAI } from '@google/genai';
+
 /**
  * Removes trailing 'turtle' and any triple backticks from a string
  * @param message - The message string to parse.
@@ -47,24 +50,20 @@ export function clearLog(filename: string): void {
 }
 
 /**
- * Generates a knowledge graph using no prompt engineering by querying the specified Large Language Model (LLM) endpoint.
- *
- * Selects the appropriate system prompt based on the `shot` parameter and sends a request to the
- * corresponding LLM service (OpenRouter, Gemini, or Azure). The response is parsed and returned as a string.
- *
- * @param llm - The LLM configuration object specifying the endpoint and model ID.
- * @param shot - Determines which system prompt to use (0 for zero-shot, otherwise one-shot).
- * @param activityText - The activity description or context to provide to the LLM.
- * @param logFilename - (Optional) The filename to use for logging the request and response. Defaults to a miscellaneous log file.
- * @returns A promise that resolves to the generated TTL
- * @throws Will reject the promise if the LLM endpoint is unsupported.
+ * Generates a KG by querying the specified Large Language Model (LLM) endpoint.
  */
 export async function requestKgGen(llm: LLM, systemPrompt: string, activityText: string, logFilename: string = logFilenames.misc): Promise<string> {
-    return parseLLMOutput(await queryGemini(llm.id, systemPrompt, activityText, logFilename));
+    // calls the updated queryGemini function
+    const res = await queryGemini(llm.id, systemPrompt, activityText, logFilename);
+    if (res === "error") {
+        throw new Error("Error querying LLM for knowledge graph generation.");
+    } else{
+        return parseLLMOutput(res);
+    }
 }
 
-import 'dotenv/config';
-import { GoogleGenAI } from '@google/genai';
+// helper function to introduce delay
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
  * Generic function to query Gemini
@@ -77,19 +76,45 @@ async function queryGemini(model: string, systemPrompt: string, userPrompt: stri
     const gemini = new GoogleGenAI({
         apiKey: process.env.GEMINI_API_KEY,
     });
-    try {
-        const response = await gemini.models.generateContent({
-            model: model,
-            contents: userPrompt,
-            config: {
-                systemInstruction: systemPrompt,
-                temperature: 0.2
+
+    const MAX_RETRIES = 4; // todo: adjust number of retries --> make flexible for different LLM keys (paid versions)
+    let lastError: any = null;
+
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        try {
+            const response = await gemini.models.generateContent({
+                model: model,
+                contents: userPrompt,
+                config: {
+                    systemInstruction: systemPrompt,
+                    temperature: 0.2
+                }
+            });
+            writeToLog(logFilename, "Gemini Request (Success)", response)
+            console.log("result from gemini:", response.text);
+            return response.text || 'error';
+
+        } catch (error: any) {
+            console.error(`Error querying Gemini (Attempt ${attempt}/${MAX_RETRIES}):`, error.message);
+            lastError = error; // save latest error
+
+            // test if error message contains '503' or 'overloaded' or 'unavailable'
+            const errorMessage = (error.message || "").toLowerCase();
+            if (errorMessage.includes("503") || errorMessage.includes("overloaded") || errorMessage.includes("unavailable")) {
+                
+                if (attempt < MAX_RETRIES) {
+                    const delayTime = Math.pow(2, attempt) * 1000; 
+                    console.log(`Gemini is overloaded. Retrying in ${delayTime / 1000}s...`);
+                    await delay(delayTime);
+                }
+            } else { // 503 error -> bad request 
+                break; 
             }
-        });
-        writeToLog(logFilename, "Gemini Request", response)
-        return response.text || 'error'
-    } catch (error) {
-        console.error('Error querying Gemini:', error);
-        return "error"
+        }
     }
+
+    // if everything failed
+    console.error('All Gemini retries failed.');
+    if (lastError) writeToLog(logFilename, "Gemini FINAL ERROR", lastError.message);
+    return "error"; 
 }
