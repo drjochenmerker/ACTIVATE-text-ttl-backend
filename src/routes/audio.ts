@@ -11,8 +11,8 @@ import { callGeminiAPI } from '../services/geminiMapper.js';
 
 const router = express.Router();
 
-// --- Job-Speicher (In-Memory) ---
-// In einer echten Produktion würden Sie hier Redis oder eine DB verwenden
+const python_api_url = `${process.env.PYTHON_API_URL}:${process.env.PYTHON_API_PORT}`;
+
 type JobStatus =
     | { status: 'processing'; progress: number; message: string }
     | { status: 'complete'; data: any } // 'data' ist hier das finale DiarizationSuccessResult
@@ -20,10 +20,10 @@ type JobStatus =
 
 const jobStore = new Map<string, JobStatus>();
 
-// --- Multer-Setup (WICHTIG: Auf Festplatte speichern) ---
+
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, os.tmpdir()); // Speichere im temporären Verzeichnis des Systems
+        cb(null, os.tmpdir()); // save in temporary directory
     },
     filename: (req, file, cb) => {
         cb(null, `upload-${Date.now()}-${file.originalname}`);
@@ -34,7 +34,7 @@ const upload = multer({
     limits: { fileSize: 2 * 1024 * 1024 * 1024 } // 2 GB Limit
 });
 
-// --- API Endpunkte ---
+// api endpoints
 
 /**
  * @route POST /api/process-audio-session
@@ -230,7 +230,7 @@ function splitAudioWithFFmpeg(inputFile: string, outputDir: string, segmentTimeS
  * Ruft das Python-Backend für einen einzelnen Chunk auf.
  */
 async function callPythonBackend(filePath: string, languageCode: string | null): Promise<any> {
-    const pythonApiUrl = 'http://localhost:8001/api/diarize_and_transcribe';
+    const pythonApiUrl = `${process.env.PYTHON_API_URL}:${process.env.PYTHON_API_PORT}/api/diarize_and_transcribe`;
     const formData = new FormData();
     const fileStream = fs.createReadStream(filePath);
 
@@ -285,6 +285,56 @@ function mapSegments(transcription: any[], speakerRoleMap: Map<string, string>, 
         };
     });
 }
+
+/**
+ * @route POST /api/direct-diarization
+ * Nimmt Audio entgegen, sendet es NUR an Python (Transkription + Diarisierung)
+ * und gibt das Ergebnis direkt zurück (ohne Job-ID, ohne Gemini).
+ */
+router.post(
+    '/direct-diarization',
+    upload.single('audio_file'),
+    async (req, res) => {
+        console.log("Node-Backend: /direct-diarization aufgerufen.");
+
+        // Temp-Pfad speichern, um ihn später sicher zu löschen
+        let filePath: string | null = null;
+
+        try {
+            const audioFile = req.file;
+            const languageCode = req.body.language_code || null;
+
+            if (!audioFile) {
+                res.status(400).json({ success: false, message: "Keine 'audio_file' gefunden." });
+                return;
+            }
+
+            filePath = audioFile.path;
+
+            // Wir nutzen einfach deine existierende Hilfsfunktion!
+            // Sie ruft das Python-Backend auf und wartet auf die Antwort.
+            const diarizationResult = await callPythonBackend(filePath, languageCode);
+
+            // Ergebnis direkt an das Frontend zurücksenden
+            res.status(200).json(diarizationResult);
+
+        } catch (error: any) {
+            console.error("Fehler bei direkter Diarisierung:", error.message);
+            res.status(500).json({ 
+                success: false, 
+                message: "Fehler bei der Weiterleitung an den Python-Service.", 
+                detail: error.message 
+            });
+        } finally {
+            // WICHTIG: Aufräumen der temporären Upload-Datei
+            if (filePath) {
+                fs.unlink(filePath, (err) => {
+                    if (err) console.error(`Konnte Temp-Datei nicht löschen: ${filePath}`, err);
+                });
+            }
+        }
+    }
+);
 
 
 export default router;
