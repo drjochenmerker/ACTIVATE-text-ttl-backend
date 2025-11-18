@@ -240,33 +240,94 @@ export const ttlMergePrompts = [
         ${ttlOnlyInstruction}
     `
 ];
-export const transcriptionMerge =[
+// export const transcriptionMerge = 
+// [
+//     `
+//         Given multiple transcriptions of an audio file segmented by speaker, you will merge them with existing Conflicts.
+//         If there is no existing Conflict that matches the content of a speaker segment, you will then create a new Conflict.
+
+//         Output the final merged Conflicts and Comments in Turtle Syntax, generating titles and descriptions in German, English and Swedish for each tension/feedback/(self)impression:
+
+//         '''turtle
+//         ${ttlPrefixes}
+
+//         :ConflictID a :Conflict ;
+//         :ConflictTitle "Title"@en ;
+//         # Other language titles
+//         :ConflictDescription "Description"@en ;
+//         # Other language descriptions  
+//         :ConflictState "open" ;
+//         :WrittenBy :Entity ;
+//         # Other language authors;
+//         :HasParticipant :EntityIDs ;
+//         :CreationDate "Timestamp" ;
+//         :IsAI true ;
+//         :HasIntent :Intent ;
+//         :Origin: "Question and Answer of source as rdf:json" .
+
+//         Output only the requested format, without any additional text or explanations.
+//     `,
+
+// ];
+// [
+// ` You will summarize the following transcribed text per speaker from a medical simulation feedback session.
+//     For each speaker, you will create a JSON object containing:
+//     - "speaker_id": The unique identifier of the speaker (e.g., "SPEAKER_00").
+//     - "text": A concise summary of the speaker's transcribed text, focusing on key points relevant to medical simulation feedback.
+
+//     The output must be a valid JSON array structured as follows:
+//     [
+//         {
+//             "speaker_id": "SPEAKER_00",
+//             "text": "Summary of the speaker's transcribed text."
+//         },
+//         {
+//             "speaker_id": "SPEAKER_01",
+//             "text": "Summary of the speaker's transcribed text."
+//         }
+//         ...
+//     ]
+// `
+// ]
+// Füge dies in deine prompts.ts ein oder ersetze den bestehenden transcriptionMerge Array
+
+// src/data/prompts.ts
+
+export const transcriptionMerge = [
     `
-        Given multiple transcriptions of an audio file segmented by speaker, you will merge them with existing Conflicts.
-        If there is no existing Conflict that matches the content of a speaker segment, you will then create a new Conflict.
+    You are a semantic expert for medical simulation data.
+    
+    **Goal:** Analyze a "Transcribed Audio" (JSON) from a feedback session and generate NEW RDF triples (Turtle Syntax) representing conflicts, tensions, or comments.
+    
+    **Inputs:**
+    1. **Context (Existing TTL):** The current state of the knowledge graph. Use this to identify existing Agents (e.g., :Physician01, :Instructor) and existing Conflicts.
+    2. **Transcript:** The diarized audio text.
 
-        Output the final merged Conflicts and Comments in Turtle Syntax, generating titles and descriptions in German, English and Swedish for each tension/feedback/(self)impression:
+    **Instructions:**
+    - **Map Speakers:** Try to identify who is speaking based on the transcript labels (e.g., "SPEAKER_00") and the roles defined in the "Existing TTL". Use the predicate :WrittenBy to link to the correct entity (e.g., :Nurse01).
+    - **Create Conflicts:** If a speaker expresses a tension, uncertainty, or critical feedback that is NOT yet in the "Existing TTL", create a new :Conflict.
+    - **Create Comments:** If a speaker adds to a topic that looks like an existing conflict in the TTL, create a :Comment linked via :HasComment to that conflict.
+    - **No Duplicates:** Do NOT regenerate triples that are already in the "Existing TTL". Only output NEW information.
+    - **Format:** Output valid Turtle (TTL) syntax only. Use the same prefixes as the context.
 
-        '''turtle
-        ${ttlPrefixes}
-
-        :ConflictID a :Conflict ;
-        :ConflictTitle "Title"@en ;
-        # Other language titles
-        :ConflictDescription "Description"@en ;
-        # Other language descriptions  
+    **Output Template:**
+    '''turtle
+    ${ttlPrefixes}
+    
+    :Conflict_Audio_Gen_1 a :Conflict ;
+        :ConflictTitle "Unclear medication instructions"@en ;
+        :ConflictDescription "The nurse felt the instructions were vague."@en ;
         :ConflictState "open" ;
-        :WrittenBy :Entity ;
-        # Other language authors;
-        :HasParticipant :EntityIDs ;
-        :CreationDate "Timestamp" ;
+        :WrittenBy :Nurse01 ; 
+        :HasParticipant :Physician01 ;
+        :CreationDate "2024-..." ;
         :IsAI true ;
-        :HasIntent :Intent ;
-        :Origin: "Question and Answer of source as rdf:json" .
+        :Origin "AudioTranscript" .
+    '''
 
-        Output only the requested format, without any additional text or explanations.
+    Output only the requested Turtle Syntax, without any additional text or explanations.
     `
-]
+];
 const roleTypes = [ // TODO define roles
   "Teacher/Instructor",
   "Actor",

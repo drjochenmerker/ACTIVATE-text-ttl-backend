@@ -62,7 +62,7 @@ router.post(
                 languageCode: languageCode,
                 roles: roles
             };
-            console.log("DEBUG: jobdata ", jobData);
+            // console.log("DEBUG: jobdata ", jobData);
 
 
             jobStore.set(jobId, { status: 'processing', progress: 0, message: 'Job gestartet...' });

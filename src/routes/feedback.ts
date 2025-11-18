@@ -461,21 +461,88 @@ router.post('/pool', async (req, res) => {
     });
 });
 
+// src/routes/feedback.ts
+
 router.post('/transcriptionPool', async (req, res) => {
-    // todo implement big pooling logic
-    writeToLog(logFilenames.feedback, "Trying to pool transcription results with existing conflicts: ", JSON.stringify(req.body));
-    console.log("Big Pooling Results:", req.body);
-    // todo what is what?!??!
-    const entityPool = req.body;
+    writeToLog(logFilenames.feedback, "Trying to pool transcription results: ", JSON.stringify(req.body));
+
+    const transcriptionPool = req.body.diarizedTranscript; 
+    const existingTTL = req.body.existingTTL || ""; // Der Kontext vom Frontend
+    
+    if (!transcriptionPool || transcriptionPool.length === 0) { 
+        res.status(200).json({
+            error: errorMessages.missingFields,
+        });
+        return;
+    }
+
     try {
         let result: string;
-        writeToLog(logFilenames.feedback, "Starting semantic merging process", '');
-        console.log("entitypool", entityPool)
-        // Entity Merge
-        // result = await requestKgGen(geminiDetail, transcriptionMerge[0], entityPool, logFilenames.feedback);
-    }catch (error) {
-        console.error("Error during big pooling:", error);
+        writeToLog(logFilenames.feedback, "Starting transcription merging process", '');
+        
+        // Construct the prompt input
+        const promptInput = `
+        EXISTING KNOWLEDGE GRAPH (TTL Context):
+        ${existingTTL}
+
+        NEW TRANSCRIPT (JSON):
+        ${JSON.stringify(transcriptionPool, null, 2)}
+        `;
+
+        // Request KG generation
+        result = await requestKgGen(
+            geminiDetail, 
+            transcriptionMerge[0], // Uses the new prompt from step 1
+            promptInput, 
+            logFilenames.feedback
+        );
+
+        if (result === 'error' || result.length === 0) {
+            res.status(200).json({
+                error: errorMessages.generationFailed,
+            });
+            return;
+        }
+
+        // Optional: Validate output (Empfohlen)
+        // Wir nutzen hier eine vereinfachte Validierung oder geben das Ergebnis direkt zurück,
+        // da wir davon ausgehen, dass requestKgGen bereits Parsing/Cleanup macht (parseLLMOutput).
+        
+        res.json({
+            status: 'done',
+            ttl: removeAtLines(result) // Clean up @prefix lines to avoid duplication in main.py parse
+        });
+
+    } catch (error) {
+        console.error("Error during transcription pooling:", error);
+        res.status(500).json({ error: "Internal processing error" });
     }
 });
+// router.post('/transcriptionPool', async (req, res) => {
+//     writeToLog(logFilenames.feedback, "Trying to pool transcription results with existing conflicts: ", JSON.stringify(req.body));
+
+//     const transcriptionPool = req.body.diarizedTranscript; // everything that was transcribed
+//     if (transcriptionPool.length === 0) { // transcription pool is empty - nothing to pool
+//         res.status(200).json({
+//             error: errorMessages.missingFields,
+//         });
+//         return;
+//     }
+
+//     try {
+//         let result: string; // result of the pooling request 
+//         writeToLog(logFilenames.feedback, "Starting semantic merging process", '');
+//         // console.log("DEBUG: transcriptionpool: ", transcriptionPool) // everything that was transcribed
+        
+//         // Request KG generation for merging transcription with existing conflicts
+//         result = await requestKgGen(geminiDetail, transcriptionMerge[0], transcriptionPool, logFilenames.feedback);
+//         res.json({
+//             status: 'done',
+//             mergedTranscription: result
+//         });
+//     }catch (error) {
+//         console.error("Error during big pooling:", error);
+//     }
+// });
 
 export default router;

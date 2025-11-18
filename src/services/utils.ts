@@ -91,7 +91,6 @@ async function queryGemini(model: string, systemPrompt: string, userPrompt: stri
                 }
             });
             writeToLog(logFilename, "Gemini Request (Success)", response)
-            console.log("result from gemini:", response.text);
             return response.text || 'error';
 
         } catch (error: any) {
