@@ -3,7 +3,7 @@ import { Router } from 'express';
 import { errorMessages, logFilenames } from '../data/staticContent.js';
 import { removeAtLines, requestKgGen, writeToLog } from '../services/utils.js';
 import { validateTTLObject } from '../services/validator.js';
-import { feedbackSystemPrompts, settingGenerationPrompts, ttlMergePrompts } from '../data/prompts.js';
+import { feedbackSystemPrompts, settingGenerationPrompts, transcriptionMerge, ttlMergePrompts } from '../data/prompts.js';
 import { geminiDetail } from '../data/resources.js';
 
 const router = Router();
@@ -461,10 +461,21 @@ router.post('/pool', async (req, res) => {
     });
 });
 
-router.post('/bigPool', async (req, res) => {
+router.post('/transcriptionPool', async (req, res) => {
     // todo implement big pooling logic
-    writeToLog(logFilenames.feedback, "Trying to big-pool results: ", JSON.stringify(req.body));
+    writeToLog(logFilenames.feedback, "Trying to pool transcription results with existing conflicts: ", JSON.stringify(req.body));
     console.log("Big Pooling Results:", req.body);
+    // todo what is what?!??!
+    const entityPool = req.body;
+    try {
+        let result: string;
+        writeToLog(logFilenames.feedback, "Starting semantic merging process", '');
+        console.log("entitypool", entityPool)
+        // Entity Merge
+        // result = await requestKgGen(geminiDetail, transcriptionMerge[0], entityPool, logFilenames.feedback);
+    }catch (error) {
+        console.error("Error during big pooling:", error);
+    }
 });
 
 export default router;

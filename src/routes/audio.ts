@@ -11,8 +11,6 @@ import { callGeminiAPI } from '../services/geminiMapper.js';
 
 const router = express.Router();
 
-const python_api_url = `${process.env.PYTHON_API_URL}:${process.env.PYTHON_API_PORT}`;
-
 type JobStatus =
     | { status: 'processing'; progress: number; message: string }
     | { status: 'complete'; data: any } // 'data' ist hier das finale DiarizationSuccessResult
@@ -38,8 +36,7 @@ const upload = multer({
 
 /**
  * @route POST /api/process-audio-session
- * NIMMT den Job entgegen, gibt eine Job-ID zurück und startet die Verarbeitung
- * im Hintergrund.
+    accepts an audio file and roles, starts background processing and immediately returns a job ID
  */
 router.post(
     '/process-audio-session',
@@ -58,22 +55,20 @@ router.post(
                 return;
             }
 
-            // Job-ID erstellen
             const jobId = crypto.randomUUID();
             const jobData = {
-                filePath: audioFile.path, // Pfad zur temporären Datei auf der Festplatte
+                filePath: audioFile.path, // path to the uploaded file
                 originalName: audioFile.originalname,
                 languageCode: languageCode,
                 roles: roles
             };
+            console.log("DEBUG: jobdata ", jobData);
 
-            // Job im Store speichern
+
             jobStore.set(jobId, { status: 'processing', progress: 0, message: 'Job gestartet...' });
 
-            // SOFORT an das Frontend antworten
-            res.status(202).json({ job_id: jobId }); // 202 = Accepted
+            res.status(202).json({ job_id: jobId });
 
-            // Verarbeitung im Hintergrund starten (OHNE await)
             processAudioInBackground(jobId, jobData);
 
         } catch (error: any) {
@@ -85,7 +80,7 @@ router.post(
 
 /**
  * @route GET /api/job-status/:job_id
- * WIRD vom Frontend wiederholt aufgerufen (Polling), um den Status abzufragen.
+ * is called by the frontend to check the status of a processing job
  */
 router.get('/job-status/:job_id', (req, res) => {
     const jobId = req.params.job_id;
@@ -96,7 +91,6 @@ router.get('/job-status/:job_id', (req, res) => {
         return;
     }
 
-    // Wenn der Job fertig ist, senden wir die Daten und löschen den Job aus dem Speicher
     if (job.status === 'complete' || job.status === 'error') {
         jobStore.delete(jobId); 
     }
@@ -104,7 +98,7 @@ router.get('/job-status/:job_id', (req, res) => {
     res.status(200).json(job);
 });
 
-// --- Hintergrund-Verarbeitung (Die eigentliche Arbeit) ---
+// Background processing
 
 interface JobData {
     filePath: string;
@@ -114,7 +108,7 @@ interface JobData {
 }
 
 /**
- * Führt die gesamte (langsame) Verarbeitungs-Pipeline im Hintergrund aus.
+ * Executes the (slow) processing pipeline in the background.
  */
 async function processAudioInBackground(jobId: string, jobData: JobData) {
     const { filePath, originalName, languageCode, roles } = jobData;
@@ -122,46 +116,45 @@ async function processAudioInBackground(jobId: string, jobData: JobData) {
     let totalDuration = 0;
     let detectedLanguage = languageCode || 'unknown';
 
-    // Temporäres Verzeichnis für Chunks erstellen
+    // Create tmp directory for chunks
     const chunkDir = path.join(os.tmpdir(), `job-${jobId}`);
     try {
         await fs.promises.mkdir(chunkDir);
 
         jobStore.set(jobId, { status: 'processing', progress: 10, message: 'Audio wird aufgeteilt...' });
 
-        // --- 1. Audio in Chunks aufteilen (z.B. 5 Minuten / 300 Sekunden) ---
+        // 1. split audio into chunks (300s each)
         const chunkFiles = await splitAudioWithFFmpeg(filePath, chunkDir, 300);
         const totalChunks = chunkFiles.length;
         console.log(`Job ${jobId}: Audio in ${totalChunks} Chunks aufgeteilt.`);
 
-        // --- 2. Chunks nacheinander verarbeiten ---
+        // 2. process chunks sequentially
         for (let i = 0; i < totalChunks; i++) {
             const chunkFile = chunkFiles[i];
             const progress = 10 + Math.round((i / totalChunks) * 80); // 10% -> 90%
-            jobStore.set(jobId, { status: 'processing', progress: progress, message: `Transkribiere Teil ${i + 1} von ${totalChunks} (KI-Verarbeitung läuft...)` });
-
-            // --- 3. Python-Backend aufrufen (Transkription & Diarisierung) ---
+            jobStore.set(jobId, { status: 'processing', progress: progress, message: `Transcribing part ${i + 1} of ${totalChunks} (AI processing in progress...)` });
+            // 3. call Python backend (transcription & diarization)
             const diarizationResult = await callPythonBackend(chunkFile.path, languageCode);
             
-            if (i === 0) { // Sprache nur vom ersten Chunk nehmen
+            if (i === 0) {
                 detectedLanguage = diarizationResult.detected_language;
-                totalDuration = 0; // Wir summieren die Dauer
+                totalDuration = 0;
             }
             totalDuration += diarizationResult.total_duration_s;
 
-            // --- 4. Gemini-Backend aufrufen (Rollen-Mapping) ---
+            // 4. call Gemini backend (role mapping)
             const speakerTextMap = consolidateSpeakerText(diarizationResult.diarized_transcription);
             const roleMapping = await callGeminiAPI(speakerTextMap, roles);
             const speakerRoleMap = new Map<string, string>();
             roleMapping.forEach(m => speakerRoleMap.set(m.speaker_id, m.role));
 
-            // --- 5. Ergebnisse zusammenführen ---
-            const timeOffset = chunkFile.startTime; // Zeit-Offset für diesen Chunk
+            // 5. merge results
+            const timeOffset = chunkFile.startTime;
             const mappedSegments = mapSegments(diarizationResult.diarized_transcription, speakerRoleMap, timeOffset);
             allFinalSegments.push(...mappedSegments);
         }
 
-        // --- 6. Job als "abgeschlossen" markieren ---
+        // 6. mark job as "complete"
         jobStore.set(jobId, {
             status: 'complete',
             data: {
@@ -169,56 +162,55 @@ async function processAudioInBackground(jobId: string, jobData: JobData) {
                 detected_language: detectedLanguage,
                 diarized_transcription: allFinalSegments,
                 total_duration_s: totalDuration,
-                // (processing_times_s wird hier weggelassen, da es pro Chunk war)
             }
         });
         console.log(`Job ${jobId}: Erfolgreich abgeschlossen.`);
 
     } catch (error: any) {
-        console.error(`Job ${jobId}: FEHLER bei der Hintergrundverarbeitung:`, error.message);
-        jobStore.set(jobId, { status: 'error', message: error.message || "Unbekannter Verarbeitungsfehler." });
+        console.error(`Job ${jobId}: ERROR during background processing:`, error.message);
+        jobStore.set(jobId, { status: 'error', message: error.message || "Unknown processing error." });
     
     } finally {
-        // --- 7. Aufräumen ---
-        fs.unlink(filePath, (err) => { // Original-Upload löschen
-            if (err) console.error(`Job ${jobId}: Konnte Upload-Datei nicht löschen: ${filePath}`, err);
+        // 7. clean up
+        fs.unlink(filePath, (err) => { // Delete original upload
+            if (err) console.error(`Job ${jobId}: Could not delete upload file: ${filePath}`, err);
         });
-        fs.rm(chunkDir, { recursive: true, force: true }, (err) => { // Chunk-Ordner löschen
-            if (err) console.error(`Job ${jobId}: Konnte Chunk-Ordner nicht löschen: ${chunkDir}`, err);
+        fs.rm(chunkDir, { recursive: true, force: true }, (err) => { // Delete chunk directory
+            if (err) console.error(`Job ${jobId}: Could not delete chunk directory: ${chunkDir}`, err);
         });
     }
 }
 
-// --- Hilfsfunktionen für die Hintergrundverarbeitung ---
+// --- Helper functions for background processing ---
 
 /**
- * Ruft FFmpeg auf, um eine Audiodatei in Segmente zu zerlegen.
- * Gibt eine Liste von Dateipfaden und deren Startzeiten zurück.
+ * Calls ffmpeg to split an audio file into segments.
+ * returns list of file paths and their start times.
  */
 function splitAudioWithFFmpeg(inputFile: string, outputDir: string, segmentTimeSec: number): Promise<{ path: string; startTime: number }[]> {
     return new Promise((resolve, reject) => {
-        const outputPattern = path.join(outputDir, 'chunk-%03d.wav'); // Erzeugt chunk-000.wav, chunk-001.wav, ...
-        // -f segment: Teilt die Datei
-        // -segment_time: Dauer jedes Chunks
-        // -c copy: Kopiert den Audio-Codec (schnell), WENN das Format .wav ist.
-        // Falls Sie .webm/.mp3 erlauben, müssen Sie '-c:a pcm_s16le' verwenden, um zu WAV zu konvertieren.
-        // Da wir im Frontend zu WAV konvertieren, ist 'copy' sicher.
+        const outputPattern = path.join(outputDir, 'chunk-%03d.wav'); // Creates chunk-000.wav, chunk-001.wav, ...
+        // -f segment: Splits the file
+        // -segment_time: duration of each segment in seconds
+        // -c copy: Copies the audio codec (fast), IF the format is .wav.
+        // if .webm/.mp3 is allowed, you need to use '-c:a pcm_s16le' to convert to WAV.
+        // Since we convert to WAV in the frontend, 'copy' is safe.
         const command = `ffmpeg -i "${inputFile}" -f segment -segment_time ${segmentTimeSec} -c copy "${outputPattern}"`;
 
         exec(command, (error, stdout, stderr) => {
             if (error) {
-                console.error('FFmpeg-Fehler (split):', stderr);
-                return reject(new Error(`FFmpeg-Fehler beim Aufteilen der Datei: ${stderr}`));
+                console.error('FFmpeg error (split):', stderr);
+                return reject(new Error(`FFmpeg error while splitting file: ${stderr}`));
             }
             
-            // Finde die erstellten Dateien
+            // Find the created files
             fs.readdir(outputDir, (err, files) => {
                 if (err) return reject(err);
                 const chunkFiles = files
                     .filter(f => f.startsWith('chunk-') && f.endsWith('.wav'))
                     .map((file, index) => ({
                         path: path.join(outputDir, file),
-                        startTime: index * segmentTimeSec // Zeit-Offset
+                        startTime: index * segmentTimeSec // time offset
                     }));
                 resolve(chunkFiles);
             });
@@ -227,7 +219,7 @@ function splitAudioWithFFmpeg(inputFile: string, outputDir: string, segmentTimeS
 }
 
 /**
- * Ruft das Python-Backend für einen einzelnen Chunk auf.
+    calls the backend Python service for diarization and transcription
  */
 async function callPythonBackend(filePath: string, languageCode: string | null): Promise<any> {
     const pythonApiUrl = `${process.env.PYTHON_API_URL}:${process.env.PYTHON_API_PORT}/api/diarize_and_transcribe`;
@@ -235,7 +227,7 @@ async function callPythonBackend(filePath: string, languageCode: string | null):
     const fileStream = fs.createReadStream(filePath);
 
     formData.append('audio_file', fileStream, {
-        filename: path.basename(filePath), // z.B. chunk-001.wav
+        filename: path.basename(filePath), // e.g. chunk-001.wav
         contentType: 'audio/wav',
     });
     if (languageCode) {
@@ -247,18 +239,18 @@ async function callPythonBackend(filePath: string, languageCode: string | null):
         formData,
         { 
             headers: formData.getHeaders(),
-            timeout: 30 * 60 * 1000 // 30 Min. Timeout pro Chunk
+            timeout: 30 * 60 * 1000 // 30 minutes timeout
         }
     );
     
     if (pythonResponse.data.status !== 'success') {
-         throw new Error(`Python-Dienst meldete Fehler für Chunk ${filePath}: ${pythonResponse.data.message}`);
+         throw new Error(`Python service reported error for chunk ${filePath}: ${pythonResponse.data.message}`);
     }
     return pythonResponse.data;
 }
 
 /**
- * Konsolidiert Text für Gemini (bleibt gleich).
+ * Consolidates text for Gemini (remains the same).
  */
 function consolidateSpeakerText(transcription: any[]): { [key: string]: string } {
     const speakerTextMap: { [key: string]: string } = {};
@@ -271,7 +263,7 @@ function consolidateSpeakerText(transcription: any[]): { [key: string]: string }
 }
 
 /**
- * Wendet das Rollen-Mapping an und korrigiert Zeitstempel basierend auf dem Chunk-Offset.
+ * Applies role mapping and adjusts timestamps based on the chunk offset.
  */
 function mapSegments(transcription: any[], speakerRoleMap: Map<string, string>, timeOffset: number): any[] {
      return transcription.map((segment: any) => {
@@ -279,7 +271,7 @@ function mapSegments(transcription: any[], speakerRoleMap: Map<string, string>, 
         return {
             ...segment,
             speaker: assignedRole ? `${assignedRole} (${segment.speaker})` : segment.speaker,
-            // Zeitstempel korrigieren
+            // Correct timestamps
             start: segment.start + timeOffset,
             end: segment.end + timeOffset,
         };
@@ -288,16 +280,16 @@ function mapSegments(transcription: any[], speakerRoleMap: Map<string, string>, 
 
 /**
  * @route POST /api/direct-diarization
- * Nimmt Audio entgegen, sendet es NUR an Python (Transkription + Diarisierung)
- * und gibt das Ergebnis direkt zurück (ohne Job-ID, ohne Gemini).
+ * Accepts audio, sends it ONLY to Python (transcription + diarization)
+ * and returns the result directly (without job ID, without Gemini).
  */
 router.post(
     '/direct-diarization',
     upload.single('audio_file'),
     async (req, res) => {
-        console.log("Node-Backend: /direct-diarization aufgerufen.");
+        console.log("Node-Backend: /direct-diarization called.");
 
-        // Temp-Pfad speichern, um ihn später sicher zu löschen
+        // Store temp path to safely delete it later
         let filePath: string | null = null;
 
         try {
@@ -311,25 +303,25 @@ router.post(
 
             filePath = audioFile.path;
 
-            // Wir nutzen einfach deine existierende Hilfsfunktion!
-            // Sie ruft das Python-Backend auf und wartet auf die Antwort.
+            // We simply use your existing helper function!
+            // It calls the Python backend and waits for the response.
             const diarizationResult = await callPythonBackend(filePath, languageCode);
 
-            // Ergebnis direkt an das Frontend zurücksenden
+            // Send the result directly back to the frontend
             res.status(200).json(diarizationResult);
 
         } catch (error: any) {
-            console.error("Fehler bei direkter Diarisierung:", error.message);
+            console.error("Error during direct diarization:", error.message);
             res.status(500).json({ 
                 success: false, 
-                message: "Fehler bei der Weiterleitung an den Python-Service.", 
+                message: "Error forwarding to the Python service.", 
                 detail: error.message 
             });
         } finally {
-            // WICHTIG: Aufräumen der temporären Upload-Datei
+            // IMPORTANT: Clean up the temporary upload file
             if (filePath) {
                 fs.unlink(filePath, (err) => {
-                    if (err) console.error(`Konnte Temp-Datei nicht löschen: ${filePath}`, err);
+                    if (err) console.error(`Could not delete temp file: ${filePath}`, err);
                 });
             }
         }

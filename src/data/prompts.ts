@@ -239,6 +239,33 @@ export const ttlMergePrompts = [
         Merge as many tensions/comments as possible without combining anything that isn't semantically similar. During this merging process no information must be lost!
         ${ttlOnlyInstruction}
     `
+];
+export const transcriptionMerge =[
+    `
+        Given multiple transcriptions of an audio file segmented by speaker, you will merge them with existing Conflicts.
+        If there is no existing Conflict that matches the content of a speaker segment, you will then create a new Conflict.
+
+        Output the final merged Conflicts and Comments in Turtle Syntax, generating titles and descriptions in German, English and Swedish for each tension/feedback/(self)impression:
+
+        '''turtle
+        ${ttlPrefixes}
+
+        :ConflictID a :Conflict ;
+        :ConflictTitle "Title"@en ;
+        # Other language titles
+        :ConflictDescription "Description"@en ;
+        # Other language descriptions  
+        :ConflictState "open" ;
+        :WrittenBy :Entity ;
+        # Other language authors;
+        :HasParticipant :EntityIDs ;
+        :CreationDate "Timestamp" ;
+        :IsAI true ;
+        :HasIntent :Intent ;
+        :Origin: "Question and Answer of source as rdf:json" .
+
+        Output only the requested format, without any additional text or explanations.
+    `
 ]
 const roleTypes = [ // TODO define roles
   "Teacher/Instructor",
