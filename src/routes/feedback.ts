@@ -3,7 +3,7 @@ import { Router } from 'express';
 import { errorMessages, logFilenames } from '../data/staticContent.js';
 import { removeAtLines, requestKgGen, writeToLog } from '../services/utils.js';
 import { validateTTLObject } from '../services/validator.js';
-import { feedbackSystemPrompts, settingGenerationPrompts, transcriptionMerge, ttlMergePrompts } from '../data/prompts.js';
+import { feedbackSystemPrompts, settingGenerationPrompts, ttlMergePrompts } from '../data/prompts.js';
 import { geminiDetail } from '../data/resources.js';
 
 const router = Router();
@@ -336,6 +336,69 @@ router.post('/submit', async (req, res) => {
     });
 });
 
+router.post('/submitTranscript', async (req, res) => {
+    writeToLog(logFilenames.feedback, "Trying to parse transcription feedback: ", JSON.stringify(req.body));
+    const feedbackSetting = req.body.setting;
+    const settingEntities = JSON.stringify(req.body.entities) || [];
+    const feedback = JSON.stringify(req.body.feedback);
+    // Check if request has all required fields
+    if (!feedbackSetting || !feedback || !geminiDetail) {
+        res.status(200).json({
+            error: errorMessages.missingFields,
+        });
+        return;
+    }
+    // Parse feedback
+    let generatedTTLObject = {
+        entities: '',
+        tensions: '',
+    }
+    let result: string;
+    writeToLog(logFilenames.feedback, "Starting Transcription Submission Parser", '');
+
+    // Entity Extraction
+    result = await requestKgGen(geminiDetail, feedbackSystemPrompts[0], `
+            Setting: ${feedbackSetting}
+            Existing Entities: ${settingEntities}
+            Feedback: ${feedback}
+        `, logFilenames.feedback);
+    if (result === 'error' || result.length === 0) {
+        res.status(200).json({
+            error: errorMessages.generationFailed,
+        });
+        return;
+    }
+    generatedTTLObject.entities = result;
+
+    // Tension Extraction
+    result = await requestKgGen(geminiDetail, feedbackSystemPrompts[2], `
+            Setting: ${feedbackSetting}
+            Existing Entities: ${settingEntities} and ${generatedTTLObject.entities}
+            Feedback: ${feedback}
+            Timestamp: ${new Date().toISOString()}
+        `, logFilenames.feedback);
+    if (result === 'error' || result.length === 0) {
+        res.status(200).json({
+            error: errorMessages.generationFailed,
+        });
+        return;
+    }
+    generatedTTLObject.tensions = result;
+
+    // Validate generated TTL
+    const validatorRes = await validateTTLObject(generatedTTLObject, logFilenames.feedback, geminiDetail)
+    if (!validatorRes) {
+        res.status(200).json({
+            error: errorMessages.validationFailed,
+        });
+        return;
+    }
+    writeToLog(logFilenames.feedback, "Generated TTL", removeAtLines(validatorRes.entities) + "\n#####\n" + validatorRes.tensions);
+    res.json({
+        status: 'done', ttl: validatorRes
+    });
+});
+
 /**
  * @swagger
  * /api/feedback/pool:
@@ -492,7 +555,7 @@ router.post('/transcriptionPool', async (req, res) => {
         // Request KG generation
         result = await requestKgGen(
             geminiDetail, 
-            transcriptionMerge[0], // Uses the new prompt from step 1
+            ttlMergePrompts[2], // Uses the new prompt from step 1
             promptInput, 
             logFilenames.feedback
         );

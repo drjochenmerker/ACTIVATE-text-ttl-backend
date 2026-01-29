@@ -85,4 +85,5 @@ export const logFilenames = {
     start: 'generator-start',
     edit: 'generator-edit',
     feedback: 'feedback',
+    audio: 'audio-processing',
 }

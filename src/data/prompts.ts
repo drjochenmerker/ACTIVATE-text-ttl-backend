@@ -159,7 +159,7 @@ export const feedbackSystemPrompts = [
 
         Output only the requested format, without any additional text or explanations and do not include any existing entity from the input.
     `,
-    // Tension Extraction Prompt
+    // Tension Extraction Prompt from Feedback Questions
     `
         Given a description of a medical simulation, a list of entities within the simulation and question-answer pairs containing thoughts written down by a participant of the simulation (including their role within), you will extract all important tensions, feedbacks and (self)impressions between/of the entities and write transform them to Turtle Syntax.
 
@@ -209,9 +209,80 @@ export const feedbackSystemPrompts = [
 
         Output only the requested format, without any additional text or explanations. 
     `,
+    // Tension Extraction Prompt from Transcript
+    // todo check this prompt
+        `
+        Given a description of a medical simulation, a list of entities within the simulation and a transcript of a debriefing , you will extract all important tensions, feedbacks and (self)impressions between/of the entities and write transform them to Turtle Syntax.
+
+        The extracted tensions, feedbacks and impressions must be assigned a unique identifier, the class "Conflict", a title ("ConflictTitle"), a description ("ConflictDescription"), the state ("ConflictState") "open" and an author ("WrittenBy") who must be one of the given entities that initiated the tension/feedback/impression.
+        If entities are involved in a tension/feedback/impression, they must be linked with the relation "HasParticipant" with the tension/feedback/impression as the source entity. A tension/feedback/impression must not have participants from more than three classes. If the participants belong to exactly three classes, the classes may only be from one of the following combinations: (Subject,Instrument, Object), (Subject, Rule, Community), (Object, Community, DivisionOfLabour) or (Subject, Object, Community). Other combinations of three classes are not allowed! Make sure to never break this rule.  If the participants belong to just one or two classes, the classes may be chosen freely.   
+
+        If other entities respond to a tension/feedback/impression, they must be linked by creating a new entity of the "Comment" class and linked to the tension/feedback/impression with the relation "HasComment".
+        The comment must have a unique identifier a description which must not be a direct quote ("CommentDescription") and an author ("WrittenBy") who must be one of the entities that responded to the tension/feedback/impression. The comments may have further comments which must also be linked in the same way using "HasComment".
+
+        You must also always keep track which part of the transcript you extracted the tension/feedback/(self)impression from and each tension/feedback/(self)impression and comment must be marked as ai generated. 
+
+        ${inputDescription}
+        Timestamp: "Timestamp of the feedback (Example: 2024-06-01T12:30:00Z)"
+        
+        Output the tensions/feedbacks/impressions in the following format, generating titles and descriptions in German, English and Swedish for each tension/feedback/(self)impression:
+
+        '''turtle
+        ${ttlPrefixes}
+
+        :ConflictID a :Conflict ;
+        :ConflictTitle "Title"@en ;
+        # Other language titles
+        :ConflictDescription "Description"@en ;
+        # Other language descriptions  
+        :ConflictState "open" ;
+        :WrittenBy :Entity ;
+        # Other language authors;
+        :HasParticipant :EntityIDs ;
+        :CreationDate "Timestamp" ;
+        :IsAI true ;
+        :HasIntent :Intent ;
+        :Origin: "Question and Answer of source as rdf:json" .
+
+        :CommentID a :Comment ;
+        :CommentDescription "Comment"@en ;
+        # Other language comments
+        :WrittenBy :Entity ;
+        # Other language authors
+        :CreationDate "Timestamp" ;
+        :IsAI true ;
+        :Origin: "Question and Answer of source as rdf:json" .
+
+        :ConflictIDorCommentID :HasComment :CommentID .
+        '''
+
+        Output only the requested format, without any additional text or explanations. 
+    `
 ]
 
+// Map Generation for Speaker to Roles based on first utterance
+export const roleSpeakerMappingTranscriptPrompt = `
+    Task: Create a JSON mapping of speaker IDs to their identified roles.
+
+    Instructions:
+    - Identify Roles: For every unique speaker ID in the transcript, look at their first utterance to determine their role (e.g., "Doctor", "Patient").
+    - Role Numbering: Append "01" to the role name (e.g., "Doctor01"). If multiple people share a role, increment the number based on their first appearance (e.g., "Nurse01", "Nurse02").
+    - Key Formatting: The JSON keys must follow the format "speaker_XX", starting specifically from "speaker_00" (do not use speaker_00).
+    
+    Output Requirements: 
+    - Return ONLY a valid JSON object.
+    - No preamble, no markdown blocks, and no additional text.
+
+    Example Output:
+    {
+        "speaker_00": "Doctor01",
+        "speaker_01": "Physiotherapist01"
+    }
+`
+
+
 export const ttlMergePrompts = [
+    // merge prompt for entities
     `
         Given multiple Turtle Syntax inputs containing entities acting in a simulation scenario, you will merge them into one Turtle Syntax output. Do not concatenate the inputs, but merge them by combining the triples semantically and ensuring that there are no triples with duplicate meanings in the output.
 
@@ -219,6 +290,7 @@ export const ttlMergePrompts = [
         During this merging process no information must be lost!
         ${ttlOnlyInstruction}
     `,
+    // merge prompt for tensions/comments
     `
         Given multiple Turtle Syntax inputs containing conflicts and entities defined in Turtle Syntax as well, you will merge them into one Turtle Syntax output. Do not concatenate the inputs, but merge them by semantically by combining the conflicts and comments. Make sure that there are no conflicts with semantically duplicate content in the output.
         If two tensions/comments can be merged into one conflict or comment, you must list both original author entities using the "WrittenBy" predicate. Also generate a new title and description based on the merged content. Make sure to merge the participants as well. 
@@ -238,124 +310,98 @@ export const ttlMergePrompts = [
         No new prefixes may be used. 
         Merge as many tensions/comments as possible without combining anything that isn't semantically similar. During this merging process no information must be lost!
         ${ttlOnlyInstruction}
+    `,
+
+    // merge prompt for diarized transcript into existing tensions
+    // todo check this prompt
     `
-];
-// export const transcriptionMerge = 
-// [
-//     `
-//         Given multiple transcriptions of an audio file segmented by speaker, you will merge them with existing Conflicts.
-//         If there is no existing Conflict that matches the content of a speaker segment, you will then create a new Conflict.
+        Given a JSON array of speaker summaries from a medical simulation feedback session and existing Conflicts in Turtle Syntax, if a speaker expresses a tension, uncertainty, or critical feedback that is NOT yet in the "Existing TTL", check if it matches an existing Conflict. If it does, create a Comment linked via :HasComment to that Conflict. If it does not, create a new :Conflict.
 
-//         Output the final merged Conflicts and Comments in Turtle Syntax, generating titles and descriptions in German, English and Swedish for each tension/feedback/(self)impression:
+        Output the final merged Conflicts and Comments in Turtle Syntax, generating titles and descriptions in German, English and Swedish for each tension/feedback/(self)impression:
 
-//         '''turtle
-//         ${ttlPrefixes}
+        '''turtle
+        ${ttlPrefixes}
 
-//         :ConflictID a :Conflict ;
-//         :ConflictTitle "Title"@en ;
-//         # Other language titles
-//         :ConflictDescription "Description"@en ;
-//         # Other language descriptions  
-//         :ConflictState "open" ;
-//         :WrittenBy :Entity ;
-//         # Other language authors;
-//         :HasParticipant :EntityIDs ;
-//         :CreationDate "Timestamp" ;
-//         :IsAI true ;
-//         :HasIntent :Intent ;
-//         :Origin: "Question and Answer of source as rdf:json" .
-
-//         Output only the requested format, without any additional text or explanations.
-//     `,
-
-// ];
-// [
-// ` You will summarize the following transcribed text per speaker from a medical simulation feedback session.
-//     For each speaker, you will create a JSON object containing:
-//     - "speaker_id": The unique identifier of the speaker (e.g., "SPEAKER_00").
-//     - "text": A concise summary of the speaker's transcribed text, focusing on key points relevant to medical simulation feedback.
-
-//     The output must be a valid JSON array structured as follows:
-//     [
-//         {
-//             "speaker_id": "SPEAKER_00",
-//             "text": "Summary of the speaker's transcribed text."
-//         },
-//         {
-//             "speaker_id": "SPEAKER_01",
-//             "text": "Summary of the speaker's transcribed text."
-//         }
-//         ...
-//     ]
-// `
-// ]
-// Füge dies in deine prompts.ts ein oder ersetze den bestehenden transcriptionMerge Array
-
-// src/data/prompts.ts
-
-export const transcriptionMerge = [
-    `
-    You are a semantic expert for medical simulation data.
-    
-    **Goal:** Analyze a "Transcribed Audio" (JSON) from a feedback session and generate NEW RDF triples (Turtle Syntax) representing conflicts, tensions, or comments.
-    
-    **Inputs:**
-    1. **Context (Existing TTL):** The current state of the knowledge graph. Use this to identify existing Agents (e.g., :Physician01, :Instructor) and existing Conflicts.
-    2. **Transcript:** The diarized audio text.
-
-    **Instructions:**
-    - **Map Speakers:** Try to identify who is speaking based on the transcript labels (e.g., "SPEAKER_00") and the roles defined in the "Existing TTL". Use the predicate :WrittenBy to link to the correct entity (e.g., :Nurse01).
-    - **Create Conflicts:** If a speaker expresses a tension, uncertainty, or critical feedback that is NOT yet in the "Existing TTL", create a new :Conflict.
-    - **Create Comments:** If a speaker adds to a topic that looks like an existing conflict in the TTL, create a :Comment linked via :HasComment to that conflict.
-    - **No Duplicates:** Do NOT regenerate triples that are already in the "Existing TTL". Only output NEW information.
-    - **Format:** Output valid Turtle (TTL) syntax only. Use the same prefixes as the context.
-
-    **Output Template:**
-    '''turtle
-    ${ttlPrefixes}
-    
-    :Conflict_Audio_Gen_1 a :Conflict ;
-        :ConflictTitle "Unclear medication instructions"@en ;
-        :ConflictDescription "The nurse felt the instructions were vague."@en ;
+        :ConflictID a :Conflict ;
+        :ConflictTitle "Title"@en ;
+        # Other language titles
+        :ConflictDescription "Description"@en ;
+        # Other language descriptions  
         :ConflictState "open" ;
-        :WrittenBy :Nurse01 ; 
-        :HasParticipant :Physician01 ;
-        :CreationDate "2024-..." ;
+        :WrittenBy :Entity ;
+        # Other language authors;
+        :HasParticipant :EntityIDs ;
+        :CreationDate "Timestamp" ;
         :IsAI true ;
-        :Origin "AudioTranscript" .
-    '''
+        :HasIntent :Intent ;
+        :Origin: "Question and Answer of source as rdf:json" .
 
-    Output only the requested Turtle Syntax, without any additional text or explanations.
+        Output only the requested format, without any additional text or explanations.
+        '''
     `
+
 ];
-const roleTypes = [ // TODO define roles
-  "Teacher/Instructor",
-  "Actor",
-  "Student (Actor)",
-  "Observer (Student)"
-];
+
+
+
+// export const transcriptionMerge = [
+//     `
+//     You are a semantic expert for medical simulation data.
+    
+//     **Goal:** Analyze a "Transcribed Audio" (JSON) from a feedback session and generate NEW RDF triples (Turtle Syntax) representing conflicts, tensions, or comments.
+    
+//     **Inputs:**
+//     1. **Context (Existing TTL):** The current state of the knowledge graph. Use this to identify existing Agents (e.g., :Physician01, :Instructor) and existing Conflicts.
+//     2. **Transcript:** The diarized audio text.
+
+//     **Instructions:**
+//     - **Map Speakers:** Try to identify who is speaking based on the transcript labels (e.g., "SPEAKER_00") and the roles defined in the "Existing TTL". Use the predicate :WrittenBy to link to the correct entity (e.g., :Nurse01).
+//     - **Create Conflicts:** If a speaker expresses a tension, uncertainty, or critical feedback that is NOT yet in the "Existing TTL", create a new :Conflict.
+//     - **Create Comments:** If a speaker adds to a topic that looks like an existing conflict in the TTL, create a :Comment linked via :HasComment to that conflict.
+//     - **No Duplicates:** Do NOT regenerate triples that are already in the "Existing TTL". Only output NEW information.
+//     - **Format:** Output valid Turtle (TTL) syntax only. Use the same prefixes as the context.
+
+//     **Output Template:**
+//     '''turtle
+//     ${ttlPrefixes}
+    
+//     :Conflict_Audio_Gen_1 a :Conflict ;
+//         :ConflictTitle "Unclear medication instructions"@en ;
+//         :ConflictDescription "The nurse felt the instructions were vague."@en ;
+//         :ConflictState "open" ;
+//         :WrittenBy :Nurse01 ; 
+//         :HasParticipant :Physician01 ;
+//         :CreationDate "2024-..." ;
+//         :IsAI true ;
+//         :Origin "AudioTranscript" .
+//     '''
+
+//     Output only the requested Turtle Syntax, without any additional text or explanations.
+//     `
+// ];
+
 
 // replace the constant prompt with a builder function
-export function buildAudioTranscriptionPrompt(sessionRoles: string[] = [], roleTypesOverride: string[] = roleTypes): string {
-    return `
-        Du bist ein Analyse-Assistent für medizinisches Training. Deine Aufgabe ist es, anonyme Sprecher (z.B. "SPEAKER_00", "SPEAKER_01") anhand des Kontexts einem Rollentyp zuzuordnen.
-        Die Szene ist ein Feedback-Gespräch nach einem Rollenspiel.
-        Die vollständige Liste der *möglichen* anwesenden Personen (falls relevant) ist: ${sessionRoles.join(', ')}.
-        Die 4 *Haupt-Rollentypen*, die du zuordnen sollst, sind: ${roleTypesOverride.join(', ')}.
+// export function buildAudioTranscriptionPrompt(sessionRoles: string[] = [], roleTypesOverride: string[] = roleTypes): string {
+//     return `
+//         Du bist ein Analyse-Assistent für medizinisches Training. Deine Aufgabe ist es, anonyme Sprecher (z.B. "SPEAKER_00", "SPEAKER_01") anhand des Kontexts einem Rollentyp zuzuordnen.
+//         Die Szene ist ein Feedback-Gespräch nach einem Rollenspiel.
+//         Die vollständige Liste der *möglichen* anwesenden Personen (falls relevant) ist: ${sessionRoles.join(', ')}.
+//         Die 4 *Haupt-Rollentypen*, die du zuordnen sollst, sind: ${roleTypesOverride.join(', ')}.
 
-        Hier sind die Heuristiken zur Identifizierung der 4 Haupt-Rollentypen:
-        1.  **Lehrperson:** Moderiert, eröffnet/beendet die Runde, stellt Fragen (z.B. "Wie fandest du...", "Was denkst du..."), fasst zusammen. (Bezieht sich oft auf 'Ausbilder' oder 'Instructor' in der Rollenliste).
-        2.  **Schauspieler:** Spricht aus der Ich-Perspektive des Patienten (z.B. "Ich als Patient", "Ich habe gespürt...", "Ich fühlte mich..."). Spricht oft nur einmal.
-        3.  **Student (Actor):** Gibt eine Selbst-Einschätzung zur eigenen Leistung (z.B. "Ich war unsicher", "Ich habe versucht...", "Ich fand es schwierig..."). Dies ist die Person, die das Feedback erhält.
-        4.  **Observer (Student):** Gibt Feedback direkt an den Spieler in der "Du"-Form (z.B. "Du hast gut erklärt", "Du warst...", "Ich fand, du..."). Dies sind oft die meisten anderen Rollen (Arzt 01-04, Pflegekraft 01-04 etc.).
+//         Hier sind die Heuristiken zur Identifizierung der 4 Haupt-Rollentypen:
+//         1.  **Lehrperson:** Moderiert, eröffnet/beendet die Runde, stellt Fragen (z.B. "Wie fandest du...", "Was denkst du..."), fasst zusammen. (Bezieht sich oft auf 'Ausbilder' oder 'Instructor' in der Rollenliste).
+//         2.  **Schauspieler:** Spricht aus der Ich-Perspektive des Patienten (z.B. "Ich als Patient", "Ich habe gespürt...", "Ich fühlte mich..."). Spricht oft nur einmal.
+//         3.  **Student (Actor):** Gibt eine Selbst-Einschätzung zur eigenen Leistung (z.B. "Ich war unsicher", "Ich habe versucht...", "Ich fand es schwierig..."). Dies ist die Person, die das Feedback erhält.
+//         4.  **Observer (Student):** Gibt Feedback direkt an den Spieler in der "Du"-Form (z.B. "Du hast gut erklärt", "Du warst...", "Ich fand, du..."). Dies sind oft die meisten anderen Rollen (Arzt 01-04, Pflegekraft 01-04 etc.).
 
-        Analysiere den folgenden JSON-Input, der den gesamten Text pro Sprecher enthält.
-        Ordne JEDEM Sprecher einen der 4 Haupt-Rollentypen ("Teacher/Instructor", "Actor", "Student (Actor)", "Observer (Student)") UND einen Konfidenz-Score (high, medium, low) zu.
+//         Analysiere den folgenden JSON-Input, der den gesamten Text pro Sprecher enthält.
+//         Ordne JEDEM Sprecher einen der 4 Haupt-Rollentypen ("Teacher/Instructor", "Actor", "Student (Actor)", "Observer (Student)") UND einen Konfidenz-Score (high, medium, low) zu.
 
-        Gib deine Antwort NUR als valides JSON-Array im folgenden Format zurück. Fasse für 'reason' kurz zusammen, warum du dich entschieden hast:
-        [
-        { "speaker_id": "SPEAKER_00", "role": "Teacher/Instructor", "confidence": "high", "reason": "Stellt moderierende Fragen." },
-        { "speaker_id": "SPEAKER_01", "role": "Student (Actor)", "confidence": "medium", "reason": "Gibt Selbst-Einschätzung." }
-        ]
-    `;
-}
+//         Gib deine Antwort NUR als valides JSON-Array im folgenden Format zurück. Fasse für 'reason' kurz zusammen, warum du dich entschieden hast:
+//         [
+//         { "speaker_id": "SPEAKER_00", "role": "Teacher/Instructor", "confidence": "high", "reason": "Stellt moderierende Fragen." },
+//         { "speaker_id": "SPEAKER_01", "role": "Student (Actor)", "confidence": "medium", "reason": "Gibt Selbst-Einschätzung." }
+//         ]
+//     `;
+// }

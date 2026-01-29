@@ -14,6 +14,7 @@ export function parseLLMOutput(message: string): string {
     return parsedMessage;
 }
 
+
 /**
  * Removes all lines that start with @ from a string
  * @param text - The input text string
@@ -62,6 +63,18 @@ export async function requestKgGen(llm: LLM, systemPrompt: string, activityText:
     }
 }
 
+/**
+ * Mapps speaker id to roles
+*/
+export async function requestRoleMapping(llm: LLM, systemPrompt: string, transcription: string, logFilename: string = logFilenames.misc): Promise<string> {
+    const res = await queryGemini(llm.id, systemPrompt, transcription, logFilename);
+    if (res === "error") {
+        throw new Error("Error querying LLM for knowledge graph generation.");
+    } else{
+        console.log("Role mapping res:", res);
+        return res;
+    }
+}
 // helper function to introduce delay
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -72,7 +85,7 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
  * @param userPrompt user prompt
  * @returns message or 'error'
  */
-async function queryGemini(model: string, systemPrompt: string, userPrompt: string, logFilename: string = logFilenames.misc): Promise<string> {
+export async function queryGemini(model: string, systemPrompt: string, userPrompt: string, logFilename: string = logFilenames.misc): Promise<string> {
     const gemini = new GoogleGenAI({
         apiKey: process.env.GEMINI_API_KEY,
     });
