@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars*/
-
 const classExplanation = `
     - "Subject" (Who are the actors in the action? Family physician, Medical specialist, Nurse, Social worker, Carers etc. 
     What perceptions, ideas and emotions are present in the actors? Uncertainty, Discomfort, Incompetence etc.),

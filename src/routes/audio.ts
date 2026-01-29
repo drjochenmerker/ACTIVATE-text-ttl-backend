@@ -1,6 +1,6 @@
 import express from 'express';
 import multer from 'multer';
-import axios from 'axios';
+import axios, { AxiosResponse } from 'axios';
 import FormData from 'form-data';
 import fs from 'fs';
 import os from 'os';
@@ -8,7 +8,8 @@ import path from 'path';
 // import { exec } from 'child_process';
 // import crypto from 'crypto';
 // import { callGeminiAPI } from '../services/geminiMapper.js';
-import { queryGemini, requestRoleMapping, writeToLog } from '../services/utils.js';
+import { requestRoleMapping, writeToLog } from '../services/utils.js';
+// import { queryGemini, requestRoleMapping, writeToLog } from '../services/utils.js';
 import { errorMessages, logFilenames } from '../data/staticContent.js';
 import { geminiDetail } from '../data/resources.js';
 import { roleSpeakerMappingTranscriptPrompt } from '../data/prompts.js';
@@ -222,7 +223,7 @@ const upload = multer({
 /**
     calls the backend Python service for diarization and transcription
  */
-async function callPythonBackend(filePath: string, languageCode: string | null): Promise<any> {
+async function callPythonBackend(filePath: string, languageCode: string | null): Promise<AxiosResponse<unknown, unknown, object>> {
     const pythonApiUrl = `${process.env.PYTHON_API_URL}:${process.env.PYTHON_API_PORT}/api/diarize_and_transcribe`;
     const formData = new FormData();
     const fileStream = fs.createReadStream(filePath);
@@ -308,19 +309,17 @@ router.post(
 
             filePath = audioFile.path;
 
-            // We simply use your existing helper function!
-            // It calls the Python backend and waits for the response.
+            // calls the Python backend and waits for the response
             const diarizationResult = await callPythonBackend(filePath, languageCode);
-
             // Send the result directly back to the frontend
             res.status(200).json(diarizationResult);
 
-        } catch (error: any) {
-            console.error("Error during direct diarization:", error.message);
+        } catch (error: unknown) {
+            console.error("Error during direct diarization:", (error as Error).message);
             res.status(500).json({ 
                 success: false, 
                 message: "Error forwarding to the Python service.", 
-                detail: error.message 
+                detail: (error as Error).message 
             });
         } finally {
             // IMPORTANT: Clean up the temporary upload file

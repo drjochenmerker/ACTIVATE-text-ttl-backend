@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { GoogleGenAI } from '@google/genai';
+import { setTimeout } from 'timers/promises';
 
 /**
  * Removes trailing 'turtle' and any triple backticks from a string
@@ -76,7 +77,7 @@ export async function requestRoleMapping(llm: LLM, systemPrompt: string, transcr
     }
 }
 // helper function to introduce delay
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const delay = (ms: number) => new Promise(() => setTimeout(ms));
 
 /**
  * Generic function to query Gemini
@@ -91,7 +92,7 @@ export async function queryGemini(model: string, systemPrompt: string, userPromp
     });
 
     const MAX_RETRIES = 4; // todo: adjust number of retries --> make flexible for different LLM keys (paid versions)
-    let lastError: any = null;
+    let lastError: Error | null = null;
 
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
         try {
@@ -106,12 +107,12 @@ export async function queryGemini(model: string, systemPrompt: string, userPromp
             writeToLog(logFilename, "Gemini Request (Success)", response)
             return response.text || 'error';
 
-        } catch (error: any) {
-            console.error(`Error querying Gemini (Attempt ${attempt}/${MAX_RETRIES}):`, error.message);
-            lastError = error; // save latest error
+        } catch (error: Error | unknown) {
+            console.error(`Error querying Gemini (Attempt ${attempt}/${MAX_RETRIES}):`, (error as Error).message);
+            lastError = error as Error; // save latest error
 
             // test if error message contains '503' or 'overloaded' or 'unavailable'
-            const errorMessage = (error.message || "").toLowerCase();
+            const errorMessage = ((error as Error).message || "").toLowerCase();
             if (errorMessage.includes("503") || errorMessage.includes("overloaded") || errorMessage.includes("unavailable")) {
                 
                 if (attempt < MAX_RETRIES) {
@@ -127,6 +128,6 @@ export async function queryGemini(model: string, systemPrompt: string, userPromp
 
     // if everything failed
     console.error('All Gemini retries failed.');
-    if (lastError) writeToLog(logFilename, "Gemini FINAL ERROR", lastError.message);
+    if (lastError) writeToLog(logFilename, "Gemini FINAL ERROR", lastError);
     return "error"; 
 }
