@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import feedbackRouter from './feedback.js';
+import loginRouter from './login.js';
 
 /**
  * Manages api subroutes
@@ -14,5 +15,6 @@ import feedbackRouter from './feedback.js';
 
 const router = Router();
 router.use('/feedback', feedbackRouter);
+router.use('/login', loginRouter);
 
 export default router;

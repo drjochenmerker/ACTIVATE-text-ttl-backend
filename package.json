@@ -21,6 +21,8 @@
         "@google/genai": "^0.15.0",
         "@google/generative-ai": "^0.24.1",
         "axios": "^1.13.2",
+        "@types/bcrypt": "^6.0.0",
+        "bcrypt": "^6.0.0",
         "dotenv": "^16.5.0",
         "express": "^5.1.0",
         "form-data": "^4.0.4",

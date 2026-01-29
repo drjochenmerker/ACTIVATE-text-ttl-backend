@@ -7,12 +7,15 @@ import cors from 'cors';
 import { createServer } from 'node:http';
 import { setupSocketIO } from './socket.js';
 import audioRouter from './routes/audio.js';
-
+import dotenv from 'dotenv';
 
 const app = express();
 app.use(express.json());
 const server = createServer(app);
-const port = process.env.BACKEND_PORT || 8500; // Behält Ihren Port bei
+
+const port = process.env.BACKEND_PORT || 8500;
+
+dotenv.config({ path: '../.env' });
 
 // Swagger Setup
 const swaggerSpec = swaggerJsdoc({
