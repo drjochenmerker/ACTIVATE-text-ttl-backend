@@ -1,18 +1,18 @@
-import express from 'express';
-import multer from 'multer';
-import axios, { AxiosResponse } from 'axios';
-import FormData from 'form-data';
-import fs from 'fs';
-import os from 'os';
-import path from 'path';
+import express from "express";
+import multer from "multer";
+import axios, { AxiosResponse } from "axios";
+import FormData from "form-data";
+import fs from "fs";
+import os from "os";
+import path from "path";
 // import { exec } from 'child_process';
 // import crypto from 'crypto';
 // import { callGeminiAPI } from '../services/geminiMapper.js';
-import { requestRoleMapping, writeToLog } from '../services/utils.js';
+import { requestRoleMapping, writeToLog } from "../services/utils.js";
 // import { queryGemini, requestRoleMapping, writeToLog } from '../services/utils.js';
-import { errorMessages, logFilenames } from '../data/staticContent.js';
-import { geminiDetail } from '../data/resources.js';
-import { roleSpeakerMappingTranscriptPrompt } from '../data/prompts.js';
+import { errorMessages, logFilenames } from "../data/staticContent.js";
+import { geminiDetail } from "../data/resources.js";
+import { roleSpeakerMappingTranscriptPrompt } from "../data/prompts.js";
 
 const router = express.Router();
 
@@ -23,18 +23,17 @@ const router = express.Router();
 
 // const jobStore = new Map<string, JobStatus>();
 
-
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, os.tmpdir()); // save in temporary directory
     },
     filename: (req, file, cb) => {
         cb(null, `upload-${Date.now()}-${file.originalname}`);
-    }
+    },
 });
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 2 * 1024 * 1024 * 1024 } // 2 GB Limit
+    limits: { fileSize: 2 * 1024 * 1024 * 1024 }, // 2 GB Limit
 });
 
 // api endpoints
@@ -47,7 +46,7 @@ const upload = multer({
 //     '/process-audio-session',
 //     upload.single('audio_file'),
 //     async (req, res) => {
-        
+
 //         console.log("Node-Backend: /process-audio-session aufgerufen.");
 
 //         try {
@@ -68,7 +67,6 @@ const upload = multer({
 //                 roles: roles
 //             };
 //             // console.log("DEBUG: jobdata ", jobData);
-
 
 //             jobStore.set(jobId, { status: 'processing', progress: 0, message: 'Job gestartet...' });
 
@@ -97,7 +95,7 @@ const upload = multer({
 //     }
 
 //     if (job.status === 'complete' || job.status === 'error') {
-//         jobStore.delete(jobId); 
+//         jobStore.delete(jobId);
 //     }
 
 //     res.status(200).json(job);
@@ -137,7 +135,7 @@ const upload = multer({
 //             jobStore.set(jobId, { status: 'processing', progress: progress, message: `Transcribing part ${i + 1} of ${totalChunks} (AI processing in progress...)` });
 //             // 3. call Python backend (transcription & diarization)
 //             const diarizationResult = await callPythonBackend(chunkFile.path, languageCode);
-            
+
 //             if (i === 0) {
 //                 detectedLanguage = diarizationResult.detected_language;
 //                 totalDuration = 0;
@@ -171,7 +169,7 @@ const upload = multer({
 //     } catch (error: any) {
 //         console.error(`Job ${jobId}: ERROR during background processing:`, error.message);
 //         jobStore.set(jobId, { status: 'error', message: error.message || "Unknown processing error." });
-    
+
 //     } finally {
 //         // 7. clean up
 //         fs.unlink(filePath, (err) => { // Delete original upload
@@ -204,7 +202,7 @@ const upload = multer({
 //                 console.error('FFmpeg error (split):', stderr);
 //                 return reject(new Error(`FFmpeg error while splitting file: ${stderr}`));
 //             }
-            
+
 //             // Find the created files
 //             fs.readdir(outputDir, (err, files) => {
 //                 if (err) return reject(err);
@@ -223,30 +221,37 @@ const upload = multer({
 /**
     calls the backend Python service for diarization and transcription
  */
-async function callPythonBackend(filePath: string, languageCode: string | null): Promise<AxiosResponse<unknown, unknown, object>> {
-    const pythonApiUrl = `${process.env.PYTHON_API_URL}:${process.env.PYTHON_API_PORT}/api/diarize_and_transcribe`;
+async function callPythonBackend(
+    filePath: string,
+    languageCode: string | null
+): Promise<AxiosResponse<unknown, unknown, object>> {
+    // 1. Ensure the URL starts with http://
+    // 2. Provide fallbacks so it doesn't evaluate to 'undefined'
+    const host = process.env.PYTHON_API_URL;
+    const port = process.env.PYTHON_API_PORT;
+
+    const pythonApiUrl = `${host}:${port}/api/diarize_and_transcribe`;
+    // const pythonApiUrl = `${process.env.PYTHON_API_URL}:${process.env.PYTHON_API_PORT}/api/diarize_and_transcribe`;
     const formData = new FormData();
     const fileStream = fs.createReadStream(filePath);
 
-    formData.append('audio_file', fileStream, {
+    formData.append("audio_file", fileStream, {
         filename: path.basename(filePath), // e.g. chunk-001.wav
-        contentType: 'audio/wav',
+        contentType: "audio/wav",
     });
     if (languageCode) {
-         formData.append('language_code', languageCode);
+        formData.append("language_code", languageCode);
     }
 
-    const pythonResponse = await axios.post(
-        pythonApiUrl,
-        formData,
-        { 
-            headers: formData.getHeaders(),
-            timeout: 30 * 60 * 1000 // 30 minutes timeout
-        }
-    );
-    
-    if (pythonResponse.data.status !== 'success') {
-         throw new Error(`Python service reported error for chunk ${filePath}: ${pythonResponse.data.message}`);
+    const pythonResponse = await axios.post(pythonApiUrl, formData, {
+        headers: formData.getHeaders(),
+        timeout: 30 * 60 * 1000, // 30 minutes timeout
+    });
+
+    if (pythonResponse.data.status !== "success") {
+        throw new Error(
+            `Python service reported error for chunk ${filePath}: ${pythonResponse.data.message}`
+        );
     }
     return pythonResponse.data;
 }
@@ -256,9 +261,7 @@ async function callPythonBackend(filePath: string, languageCode: string | null):
  * Accepts transcript as input, sends it ONLY to LLM for speaker role mapping
  * returns the result directly
  */
-router.post(
-    '/audio/speaker-role-mapping',
-    async (req, res) => {
+router.post("/audio/speaker-role-mapping", async (req, res) => {
     const transcript = req.body.diarizedTranscript;
     if (!transcript) {
         res.status(200).json({
@@ -269,20 +272,27 @@ router.post(
 
     // map roles
     let geminiRes;
-    writeToLog(logFilenames.misc, "Speaker Role Mapping - Input Transcript", transcript);
+    writeToLog(
+        logFilenames.misc,
+        "Speaker Role Mapping - Input Transcript",
+        transcript
+    );
     geminiRes = await requestRoleMapping(
         geminiDetail,
         roleSpeakerMappingTranscriptPrompt,
         transcript,
         logFilenames.misc
     );
-    writeToLog(logFilenames.misc, "Speaker Role Mapping - Gemini Response", geminiRes);
+    writeToLog(
+        logFilenames.misc,
+        "Speaker Role Mapping - Gemini Response",
+        geminiRes
+    );
     res.json({
-            status: 'done', res: geminiRes
+        status: "done",
+        res: geminiRes,
     });
-    }
-);
-
+});
 
 /**
  * @route POST /api/direct-diarization
@@ -290,8 +300,8 @@ router.post(
  * and returns the result directly (without job ID, without Gemini).
  */
 router.post(
-    '/direct-diarization',
-    upload.single('audio_file'),
+    "/direct-diarization",
+    upload.single("audio_file"),
     async (req, res) => {
         console.log("Node-Backend: /direct-diarization called.");
 
@@ -303,34 +313,50 @@ router.post(
             const languageCode = req.body.language_code || null;
 
             if (!audioFile) {
-                res.status(400).json({ success: false, message: "Keine 'audio_file' gefunden." });
+                res.status(400).json({
+                    success: false,
+                    message: "Keine 'audio_file' gefunden.",
+                });
                 return;
             }
 
             filePath = audioFile.path;
 
             // calls the Python backend and waits for the response
-            const diarizationResult = await callPythonBackend(filePath, languageCode);
+            const diarizationResult = await callPythonBackend(
+                filePath,
+                languageCode
+            );
             // Send the result directly back to the frontend
             res.status(200).json(diarizationResult);
-
         } catch (error: unknown) {
-            console.error("Error during direct diarization:", (error as Error).message);
-            res.status(500).json({ 
-                success: false, 
-                message: "Error forwarding to the Python service.", 
-                detail: (error as Error).message 
+            console.error(
+                "Error during direct diarization:",
+                (error as Error).message
+            );
+            writeToLog(
+                logFilenames.audio,
+                "Error during direct diarization: ",
+                (error as Error).message
+            );
+            res.status(500).json({
+                success: false,
+                message: "Error forwarding to the Python service.",
+                detail: (error as Error).message,
             });
         } finally {
             // IMPORTANT: Clean up the temporary upload file
             if (filePath) {
                 fs.unlink(filePath, (err) => {
-                    if (err) console.error(`Could not delete temp file: ${filePath}`, err);
+                    if (err)
+                        console.error(
+                            `Could not delete temp file: ${filePath}`,
+                            err
+                        );
                 });
             }
         }
     }
 );
-
 
 export default router;
