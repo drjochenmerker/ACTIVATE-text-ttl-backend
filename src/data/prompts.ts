@@ -16,7 +16,7 @@ const classExplanation = `
     Immediate needs, Distance, Shortage etc.)
 
     - "DivisionOfLabour" (How can different people contribute to the activity? Hierarchy, Role, Leadership, Territorial attitude etc.).
-`
+`;
 
 const ttlOnlyInstruction = `
     Make sure to generate a graph that is as complete but also as concise as possible.
@@ -29,7 +29,7 @@ const ttlPrefixes = `
     @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
     @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
     @base <http://activate.htwk-leipzig.de/model> .
-`
+`;
 
 /**
  * System prompt instructing the LLM to fix Turtle Syntax errors.
@@ -38,7 +38,7 @@ export const ttlSyntaxFixPrompt = `
 Given an input in Turtle Syntax with an array of error message, you will fix alle of the errors. If they were to result in further errors, 
 you will fix those as well. You will not modify any of the given triples, but only fix the syntax errors.
 Output only the fixed Turtle Syntax, without any additional text or explanations. 
-`
+`;
 
 export const settingGenerationPrompts = [
     `
@@ -101,8 +101,8 @@ export const settingGenerationPrompts = [
         '''
 
         Output only the requested Turtle Syntax, without any additional text or explanations.
-    `
-]
+    `,
+];
 
 const inputDescription = `
     The input will be structured as follows:
@@ -133,7 +133,7 @@ const inputDescription = `
                 ...
             ]
     }
-`
+`;
 
 export const feedbackSystemPrompts = [
     // Entity Extraction Prompt
@@ -209,7 +209,7 @@ export const feedbackSystemPrompts = [
     `,
     // Tension Extraction Prompt from Transcript
     // todo check this prompt
-        `
+    `
         Given a description of a medical simulation, a list of entities within the simulation and a transcript of a debriefing , you will extract all important tensions, feedbacks and (self)impressions between/of the entities and write transform them to Turtle Syntax.
 
         The extracted tensions, feedbacks and impressions must be assigned a unique identifier, the class "Conflict", a title ("ConflictTitle"), a description ("ConflictDescription"), the state ("ConflictState") "open" and an author ("WrittenBy") who must be one of the given entities that initiated the tension/feedback/impression.
@@ -255,29 +255,64 @@ export const feedbackSystemPrompts = [
         '''
 
         Output only the requested format, without any additional text or explanations. 
-    `
-]
+    `,
+];
 
 // Map Generation for Speaker to Roles based on first utterance
+// export const roleSpeakerMappingTranscriptPrompt = `
+//     Task: Create a JSON object mapping Speaker IDs to their roles based on their introduction sentence.
+
+//     Input Context: You will receive a list where each line contains a "SPEAKER_XX" ID and their single introduction sentence.
+
+//     Instructions:
+//     1. **Role Extraction**: Analyze the German sentence to identify the speaker's role.
+//        - Look for patterns like: "Ich bin [Rolle]", "Ich bin der [Rolle]", "Ich gehöre zu den [Rolle]", "Ich arbeite als [Rolle]".
+//        - **Clean the Noun**: Remove adjectives (e.g., "behandelnder Arzt" -> "Arzt") and convert plurals to singular if necessary (e.g., "Physiotherapeuten" -> "Physiotherapeut").
+//        - Use the original German word. Do not translate.
+
+//     2. **ID Handling (Strict)**:
+//        - You must create a key for **EVERY** Speaker ID provided in the input.
+//        - Do not skip any ID.
+//        - Do not invent any ID.
+//        - Start with "Speaker_00" and continue sequentially (e.g., "Speaker_01", "Speaker_02", etc.). Do not deviate from this format.
+
+//     3. **Value Formatting**:
+//        - Format: "Role01".
+//        - Counter: If a role appears multiple times, increment the number based on the order in the input (e.g., "Arzt01", "Arzt02").
+//        - Fallback: If absolutely no role is mentioned in the sentence, use "Teilnehmer01".
+
+//     Output Requirements:
+//     - Return ONLY valid JSON.
+//     - No markdown blocks (no \`\`\`json), no preamble.
+
+//     Example Input:
+//     SPEAKER_02: Also ich bin Physiotherapeut und finde das schlecht.
+//     SPEAKER_05: Ich bin auf jeden Fall der Arzt hier.
+
+//     Example Output:
+//     {
+//         "SPEAKER_02": "Physiotherapeut01",
+//         "SPEAKER_05": "Arzt01"
+//     }
+// `;
 export const roleSpeakerMappingTranscriptPrompt = `
     Task: Create a JSON mapping of speaker IDs to their identified roles.
 
     Instructions:
-    - Identify Roles: For every unique speaker ID in the transcript, look at their first utterance to determine their role (e.g., "Doctor", "Patient").
+    - Identify Roles: For every unique speaker ID in the transcript
     - Role Numbering: Append "01" to the role name (e.g., "Doctor01"). If multiple people share a role, increment the number based on their first appearance (e.g., "Nurse01", "Nurse02").
-    - Key Formatting: The JSON keys must follow the format "speaker_XX", starting specifically from "speaker_00" (do not use speaker_00).
-    
-    Output Requirements: 
-    - Return ONLY a valid JSON object.
+    - Key Formatting: The JSON keys must follow the format "speaker_XX" where the speaker IDs must match exactly those in the input.
+
+    Output Requirements:
+    - It is important to only return *ONLY* a valid JSON object.
     - No preamble, no markdown blocks, and no additional text.
 
     Example Output:
     {
-        "speaker_00": "Doctor01",
+        "speaker_00": "Doctor02",
         "speaker_01": "Physiotherapist01"
     }
-`
-
+`;
 
 export const ttlMergePrompts = [
     // merge prompt for entities
@@ -336,18 +371,15 @@ export const ttlMergePrompts = [
 
         Output only the requested format, without any additional text or explanations.
         '''
-    `
-
+    `,
 ];
-
-
 
 // export const transcriptionMerge = [
 //     `
 //     You are a semantic expert for medical simulation data.
-    
+
 //     **Goal:** Analyze a "Transcribed Audio" (JSON) from a feedback session and generate NEW RDF triples (Turtle Syntax) representing conflicts, tensions, or comments.
-    
+
 //     **Inputs:**
 //     1. **Context (Existing TTL):** The current state of the knowledge graph. Use this to identify existing Agents (e.g., :Physician01, :Instructor) and existing Conflicts.
 //     2. **Transcript:** The diarized audio text.
@@ -362,12 +394,12 @@ export const ttlMergePrompts = [
 //     **Output Template:**
 //     '''turtle
 //     ${ttlPrefixes}
-    
+
 //     :Conflict_Audio_Gen_1 a :Conflict ;
 //         :ConflictTitle "Unclear medication instructions"@en ;
 //         :ConflictDescription "The nurse felt the instructions were vague."@en ;
 //         :ConflictState "open" ;
-//         :WrittenBy :Nurse01 ; 
+//         :WrittenBy :Nurse01 ;
 //         :HasParticipant :Physician01 ;
 //         :CreationDate "2024-..." ;
 //         :IsAI true ;
@@ -377,7 +409,6 @@ export const ttlMergePrompts = [
 //     Output only the requested Turtle Syntax, without any additional text or explanations.
 //     `
 // ];
-
 
 // replace the constant prompt with a builder function
 // export function buildAudioTranscriptionPrompt(sessionRoles: string[] = [], roleTypesOverride: string[] = roleTypes): string {
