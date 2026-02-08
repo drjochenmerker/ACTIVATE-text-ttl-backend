@@ -5,6 +5,7 @@ import { removeAtLines, requestKgGen, writeToLog } from '../services/utils.js';
 import { validateTTLObject } from '../services/validator.js';
 import { feedbackSystemPrompts, settingGenerationPrompts, ttlMergePrompts } from '../data/prompts.js';
 import { geminiDetail } from '../data/resources.js';
+import { LLM } from '../data/types.js';
 
 const router = Router();
 
@@ -100,6 +101,8 @@ router.post('/settingGen', async (req, res) => {
     const description = req.body.description;
     const title = req.body.title;
     const defaultRole = req.body.defaultRole;
+    const llmDetailReq = req.body.llmDetail;
+    const llmDetail: LLM = JSON.parse(llmDetailReq);
     // Check if request has all required fields
     if (!description) {
         res.status(200).json({
@@ -115,7 +118,7 @@ router.post('/settingGen', async (req, res) => {
     let result: string;
     writeToLog(logFilenames.feedback, "Starting Setting Generator", '');
     // Setting Extraction
-    result = await requestKgGen(geminiDetail, settingGenerationPrompts[0],
+    result = await requestKgGen(llmDetail, settingGenerationPrompts[0],
         `Description: ${description}
         Title: ${title}`,
         logFilenames.feedback);
@@ -129,7 +132,7 @@ router.post('/settingGen', async (req, res) => {
     generatedTTLObject.setting = result;
 
     // Entity Extraction
-    result = await requestKgGen(geminiDetail, settingGenerationPrompts[1],
+    result = await requestKgGen(llmDetail, settingGenerationPrompts[1],
         `Description: ${description}
         Default Entity: ${defaultRole}`,
         logFilenames.feedback);
@@ -142,7 +145,7 @@ router.post('/settingGen', async (req, res) => {
     generatedTTLObject.entities = result;
 
     // Validate generated TTL
-    const validatorRes = await validateTTLObject(generatedTTLObject, logFilenames.feedback, geminiDetail)
+    const validatorRes = await validateTTLObject(generatedTTLObject, logFilenames.feedback, llmDetail)
     if (!validatorRes) {
         res.status(200).json({
             error: errorMessages.validationFailed,

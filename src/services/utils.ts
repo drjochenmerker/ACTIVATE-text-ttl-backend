@@ -179,7 +179,23 @@ export function clearLog(filename: string): void {
  * @throws Will reject the promise if the LLM endpoint is unsupported.
  */
 export async function requestKgGen(llm: LLM, systemPrompt: string, activityText: string, logFilename: string = logFilenames.misc): Promise<string> {
-    return parseLLMOutput(await queryGemini(llm.id, systemPrompt, activityText, logFilename));
+    // TODO: Decide what to do with systemprompt and activitytext
+    let llmOutput: string = "";
+    switch (llm.name) {
+        case 'gemini':
+            llmOutput = await queryGemini(llm, systemPrompt, activityText, logFilename);
+            break;
+        case 'chatgpt':
+            llmOutput = await queryChatGPT(llm, activityText, logFilename);
+            break;
+        case 'claude':
+            llmOutput = await queryClaude(llm, activityText, logFilename);
+            break;
+        default:
+            break;
+    }
+    
+    return parseLLMOutput(llmOutput);
 }
 
 import 'dotenv/config';
@@ -187,7 +203,7 @@ import { GoogleGenAI } from '@google/genai';
 
 /**
  * Generic function to query Gemini
- * @param model gemini model id
+ * @param model gemini model
  * @param systemPrompt system prompt
  * @param userPrompt user prompt
  * @returns message or 'error'
@@ -195,23 +211,89 @@ import { GoogleGenAI } from '@google/genai';
 /**
  * Generic function to query Gemini safely with retries and timeout handling.
  */
-async function queryGemini(model: string, systemPrompt: string, userPrompt: string, logFilename: string = logFilenames.misc): Promise<string> {
+async function queryGemini(model: LLM, systemPrompt: string, userPrompt: string, logFilename: string = logFilenames.misc): Promise<string> {
     const gemini = new GoogleGenAI({
         apiKey: process.env.GEMINI_API_KEY,
     });
     try {
         const response = await gemini.models.generateContent({
-            model: model,
+            model: model.id,
             contents: userPrompt,
             config: {
                 systemInstruction: systemPrompt,
-                temperature: 0.2
+                temperature: model.temperature
             }
         });
         writeToLog(logFilename, "Gemini Request", response)
         return response.text || 'error'
     } catch (error) {
         console.error('Error querying Gemini:', error);
+        return "error"
+    }
+}
+
+import Anthropic from '@anthropic-ai/sdk';
+
+/**
+ * Generic function to query Claude
+ * @param model Claude model
+ * @param systemPrompt system prompt
+ * @param userPrompt user prompt
+ * @returns message or 'error'
+ */
+/**
+ * Generic function to query Claude safely with retries and timeout handling.
+ */
+async function queryClaude(model: LLM, userPrompt: string, logFilename: string = logFilenames.misc): Promise<string> {
+    const claude = new Anthropic({
+        apiKey: process.env['ANTHROPIC_API_KEY'],
+      });
+    
+    try {
+        const message = await claude.messages.create({
+            max_tokens: 1024,
+            messages: [{ role: 'user', content: userPrompt }],
+            model: model.id,
+            temperature: model.temperature,
+        });
+
+        writeToLog(logFilename, "Claude Request", message)
+        return (message.content[0] as Anthropic.TextBlock).text || 'error'; // Type cast to avoid type errors
+    } catch (error) {
+        console.error('Error querying Claude:', error);
+        return "error"
+    }
+}
+
+import OpenAI from 'openai';
+
+/**
+ * Generic function to query ChatGPT
+ * @param model ChatGPT model
+ * @param systemPrompt system prompt
+ * @param userPrompt user prompt
+ * @returns message or 'error'
+ */
+/**
+ * Generic function to query ChatGPT safely with retries and timeout handling.
+ */
+async function queryChatGPT(model: LLM, userPrompt: string, logFilename: string = logFilenames.misc): Promise<string> {
+
+    const chatgpt = new OpenAI(
+        {apiKey: process.env['OPENAI_API_KEY']}
+    );
+
+    try {
+        const message = await chatgpt.responses.create({
+            input: userPrompt,
+            model: model.id,
+            temperature : model.temperature
+        });
+
+        writeToLog(logFilename, "ChatGPT Request", message);
+        return message.output_text || 'error';
+    } catch (error) {
+        console.error('Error querying ChatGPT:', error);
         return "error"
     }
 }

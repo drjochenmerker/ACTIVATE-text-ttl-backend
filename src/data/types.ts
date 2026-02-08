@@ -14,4 +14,6 @@ export type LLM = {
     name: string;
     endpoint: string;
     description: multiLanguageString;
+    temperature: number;
+    organizationId: string | null;
 };
