@@ -1,43 +1,10 @@
 /* eslint-disable @typescript-eslint/no-unused-vars*/
 
-const classExplanation = `
-    - "Subject" (Who are the actors in the action? Family physician, Medical specialist, Nurse, Social worker, Carers etc. 
-    What perceptions, ideas and emotions are present in the actors? Uncertainty, Discomfort, Incompetence etc.),
-
-    - "Object" (What is the goal of the action? Cure, Care, addressing psychosocial issues etc. On whom or what is this action taken?
-    Patient, Relative, Blood sample etc. What action must be taken? Needs assessment, Reporting, Decisionmaking etc.),
-
-    - "Instrument" (What physical means are used in the action? Patient record, Chart, Medical device, Telephone etc.
-    Which abstract resources are deployed in the action? Conviction, Proactivity, Instruction etc.),
-
-    - "Rule" (Which specific policies and rules are linked to the activity? Guidelines, Authorization, Reimbursements, Co-location etc.
-    What implicit mores and conventions are linked to the activity? Priority, Career track, Professional jargon etc.),
-
-    - "Community" (Where does the activity take place? Home, Nursing home, Hospital etc. What organization do the actors belong to?
-    General University hospital, Independent Municipal health care practice etc. What conditions characterize this setting?
-    Immediate needs, Distance, Shortage etc.)
-
-    - "DivisionOfLabour" (How can different people contribute to the activity? Hierarchy, Role, Leadership, Territorial attitude etc.).
-`
-
-const ttlOnlyInstruction = `
-    Make sure to generate a graph that is as complete but also as concise as possible.
-    Output only the knowledge graph in Turtle Syntax, without any additional text or explanations.
-`;
-
-const ttlPrefixes = `
-    @prefix : <http://activate.htwk-leipzig.de/model#> .
-    @prefix owl: <http://www.w3.org/2002/07/owl#> .
-    @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
-    @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
-    @base <http://activate.htwk-leipzig.de/model> .
-`
-
 /**
  * System prompt instructing the LLM to fix Turtle Syntax errors.
  */
 export const ttlSyntaxFixPrompt = `
-Given an input in Turtle Syntax with an array of error message, you will fix alle of the errors. If they were to result in further errors, 
+Given an input in Turtle Syntax with an array of error message, you will fix all of the errors. If they were to result in further errors, 
 you will fix those as well. You will not modify any of the given triples, but only fix the syntax errors.
 Output only the fixed Turtle Syntax, without any additional text or explanations. 
 `
@@ -48,7 +15,11 @@ export const settingGenerationPrompts = [
 
         Refer to the following template that you can expand upon for the output. You must, however, not introduce any new prefixes:
         '''turtle
-        ${ttlPrefixes}
+        @prefix : <http://activate.htwk-leipzig.de/model#> .
+        @prefix owl: <http://www.w3.org/2002/07/owl#> .
+        @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+        @base <http://activate.htwk-leipzig.de/model> .
         
         :UniqueIdentifier a owl:NamedIndividual ;
         :ActivityDescription "summarized description"@en ;
@@ -64,7 +35,23 @@ export const settingGenerationPrompts = [
     `,
     `
         Given a description of a medical simulation, you will extract all entities present and assign them one or multiple of the following classes according to their context in the given situation:
-        ${classExplanation}
+        - "Subject" (Who are the actors in the action? Family physician, Medical specialist, Nurse, Social worker, Carers etc. 
+        What perceptions, ideas and emotions are present in the actors? Uncertainty, Discomfort, Incompetence etc.),
+
+        - "Object" (What is the goal of the action? Cure, Care, addressing psychosocial issues etc. On whom or what is this action taken?
+        Patient, Relative, Blood sample etc. What action must be taken? Needs assessment, Reporting, Decisionmaking etc.),
+
+        - "Instrument" (What physical means are used in the action? Patient record, Chart, Medical device, Telephone etc.
+        Which abstract resources are deployed in the action? Conviction, Proactivity, Instruction etc.),
+
+        - "Rule" (Which specific policies and rules are linked to the activity? Guidelines, Authorization, Reimbursements, Co-location etc.
+        What implicit mores and conventions are linked to the activity? Priority, Career track, Professional jargon etc.),
+
+        - "Community" (Where does the activity take place? Home, Nursing home, Hospital etc. What organization do the actors belong to?
+        General University hospital, Independent Municipal health care practice etc. What conditions characterize this setting?
+        Immediate needs, Distance, Shortage etc.)
+
+        - "DivisionOfLabour" (How can different people contribute to the activity? Hierarchy, Role, Leadership, Territorial attitude etc.).
 
         You will however, always and without exeption add at least the following entities of the class "Subject": "Pflege01" (Care Staff), "Pflege02", "Arzt01" (Physician), "Arzt02", and "Physiotherapeut01" (Physiotherapist), "Physiotherapeut02".
 
@@ -74,7 +61,11 @@ export const settingGenerationPrompts = [
         Output the entities you've added in Turtle Syntax and always generate Labels in German, English and Swedish for each entity. The output must be structured as follows:
 
         '''turtle
-        ${ttlPrefixes}
+        @prefix : <http://activate.htwk-leipzig.de/model#> .
+        @prefix owl: <http://www.w3.org/2002/07/owl#> .
+        @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+        @base <http://activate.htwk-leipzig.de/model> .
         
         :UniqueIdentifier a :EntityClass,
         owl:NamedIndividual ;
@@ -86,50 +77,66 @@ export const settingGenerationPrompts = [
     `
 ]
 
-const inputDescription = `
-    The input will be structured as follows:
-    Setting: "Description of the medical simulation"
-    Existing Entities: [
-        {
-            id: entity1ID,
-            classes: [
-                "Subject"
-            ] 
-        },
-        {
-            id: entity2ID,
-            classes: [
-                "Object",
-                "Rule",
-            ]
-        },
-        ...
-    ]
-    Feedback: {
-        "role": "authorEntityID",
-        "data": [
-                {
-                "question": "question that the authorEntityID was asked",
-                "answer": "answer that the authorEntityID gave"
-                },
-                ...
-            ]
-    }
-`
-
 export const feedbackSystemPrompts = [
     // Entity Extraction Prompt
     `
         Given a description of a medical simulation, a potentially incomplete list of entities within the simulation and thoughts written down by a participant of the simulation (including their role within), you will extract additional entities mentioned in the notes and assign them one or multiple of the following classes according to their context in the given situation:
-        ${classExplanation}
+        - "Subject" (Who are the actors in the action? Family physician, Medical specialist, Nurse, Social worker, Carers etc. 
+        What perceptions, ideas and emotions are present in the actors? Uncertainty, Discomfort, Incompetence etc.),
+
+        - "Object" (What is the goal of the action? Cure, Care, addressing psychosocial issues etc. On whom or what is this action taken?
+        Patient, Relative, Blood sample etc. What action must be taken? Needs assessment, Reporting, Decisionmaking etc.),
+
+        - "Instrument" (What physical means are used in the action? Patient record, Chart, Medical device, Telephone etc.
+        Which abstract resources are deployed in the action? Conviction, Proactivity, Instruction etc.),
+
+        - "Rule" (Which specific policies and rules are linked to the activity? Guidelines, Authorization, Reimbursements, Co-location etc.
+        What implicit mores and conventions are linked to the activity? Priority, Career track, Professional jargon etc.),
+
+        - "Community" (Where does the activity take place? Home, Nursing home, Hospital etc. What organization do the actors belong to?
+        General University hospital, Independent Municipal health care practice etc. What conditions characterize this setting?
+        Immediate needs, Distance, Shortage etc.)
+
+        - "DivisionOfLabour" (How can different people contribute to the activity? Hierarchy, Role, Leadership, Territorial attitude etc.).
 
         Given entities may also be assigned additional classes. 
 
-        ${inputDescription}
+        The input will be structured as follows:
+        Setting: "Description of the medical simulation"
+        Existing Entities: [
+            {
+                id: entity1ID,
+                classes: [
+                    "Subject"
+                ] 
+            },
+            {
+                id: entity2ID,
+                classes: [
+                    "Object",
+                    "Rule",
+                ]
+            },
+            ...
+        ]
+        Feedback: {
+            "role": "authorEntityID",
+            "data": [
+                    {
+                    "question": "question that the authorEntityID was asked",
+                    "answer": "answer that the authorEntityID gave"
+                    },
+                    ...
+                ]
+        }
         
         Output the entities you've added in Turtle Syntax, generating Labels in German, English and Swedish for each entity. The output must not include any entity from the input and must be structured as follows:
         '''turtle
-        ${ttlPrefixes}
+        @prefix : <http://activate.htwk-leipzig.de/model#> .
+        @prefix owl: <http://www.w3.org/2002/07/owl#> .
+        @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+        @base <http://activate.htwk-leipzig.de/model> .
         
         :UniqueIdentifier a :EntityClass,
         owl:NamedIndividual ;
@@ -153,13 +160,45 @@ export const feedbackSystemPrompts = [
 
         Depending on the content of the extracted tension/feedback/impression, the intent must be derived. You may only use the following three intents: ":Negative", ":Positive" and ":Neutral".
 
-        ${inputDescription}
+        The input will be structured as follows:
+        Setting: "Description of the medical simulation"
+        Existing Entities: [
+            {
+                id: entity1ID,
+                classes: [
+                    "Subject"
+                ] 
+            },
+            {
+                id: entity2ID,
+                classes: [
+                    "Object",
+                    "Rule",
+                ]
+            },
+            ...
+        ]
+        Feedback: {
+            "role": "authorEntityID",
+            "data": [
+                    {
+                    "question": "question that the authorEntityID was asked",
+                    "answer": "answer that the authorEntityID gave"
+                    },
+                    ...
+                ]
+        }
+
         Timestamp: "Timestamp of the feedback (Example: 2024-06-01T12:30:00Z)"
         
         Output the tensions/feedbacks/impressions in the following format, generating titles and descriptions in German, English and Swedish for each tension/feedback/(self)impression:
 
         '''turtle
-        ${ttlPrefixes}
+        @prefix : <http://activate.htwk-leipzig.de/model#> .
+        @prefix owl: <http://www.w3.org/2002/07/owl#> .
+        @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+        @base <http://activate.htwk-leipzig.de/model> .
 
         :ConflictID a :Conflict ;
         :ConflictTitle "Title"@en ;
@@ -197,7 +236,8 @@ export const ttlMergePrompts = [
 
         No new prefixes may be used.
         During this merging process no information must be lost!
-        ${ttlOnlyInstruction}
+        Make sure to generate a graph that is as complete but also as concise as possible.
+        Output only the knowledge graph in Turtle Syntax, without any additional text or explanations.
     `,
     `
         Given multiple Turtle Syntax inputs containing conflicts and entities defined in Turtle Syntax as well, you will merge them into one Turtle Syntax output. Do not concatenate the inputs, but merge them by semantically by combining the conflicts and comments. Make sure that there are no conflicts with semantically duplicate content in the output.
@@ -217,6 +257,7 @@ export const ttlMergePrompts = [
 
         No new prefixes may be used. 
         Merge as many tensions/comments as possible without combining anything that isn't semantically similar. During this merging process no information must be lost!
-        ${ttlOnlyInstruction}
+        Make sure to generate a graph that is as complete but also as concise as possible.
+        Output only the knowledge graph in Turtle Syntax, without any additional text or explanations.
     `
 ]

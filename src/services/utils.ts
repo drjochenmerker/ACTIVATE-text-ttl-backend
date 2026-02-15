@@ -166,30 +166,29 @@ export function clearLog(filename: string): void {
 }
 
 /**
- * Generates a knowledge graph using no prompt engineering by querying the specified Large Language Model (LLM) endpoint.
+ * Queries the specified Large Language Model (LLM) endpoint.
  *
- * Selects the appropriate system prompt based on the `shot` parameter and sends a request to the
- * corresponding LLM service (OpenRouter, Gemini, or Azure). The response is parsed and returned as a string.
+ * Selects the appropriate LLM service based on the `selectedProvider` parameter and sends a request to the
+ * corresponding LLM service (Gemini, ChatGPT, or Claude). The response is parsed and returned as a string.
  *
  * @param llm - The LLM configuration object specifying the endpoint and model ID.
- * @param shot - Determines which system prompt to use (0 for zero-shot, otherwise one-shot).
+ * @param systemPrompt - The system prompt to use.
  * @param activityText - The activity description or context to provide to the LLM.
  * @param logFilename - (Optional) The filename to use for logging the request and response. Defaults to a miscellaneous log file.
- * @returns A promise that resolves to the generated TTL
- * @throws Will reject the promise if the LLM endpoint is unsupported.
+ * @returns A promise that resolves to the response from the LLM.
  */
-export async function requestKgGen(llm: LLM, systemPrompt: string, activityText: string, logFilename: string = logFilenames.misc): Promise<string> {
-    // TODO: Decide what to do with systemprompt and activitytext
+export async function queryLLM(llm: LLM, systemPrompt: string, activityText: string, logFilename: string = logFilenames.misc): Promise<string> {
+
     let llmOutput: string = "";
-    switch (llm.name) {
+    switch (llm.selectedProvider) {
         case 'gemini':
             llmOutput = await queryGemini(llm, systemPrompt, activityText, logFilename);
             break;
         case 'chatgpt':
-            llmOutput = await queryChatGPT(llm, activityText, logFilename);
+            llmOutput = await queryChatGPT(llm, systemPrompt, activityText, logFilename);
             break;
         case 'claude':
-            llmOutput = await queryClaude(llm, activityText, logFilename);
+            llmOutput = await queryClaude(llm, systemPrompt, activityText, logFilename);
             break;
         default:
             break;
@@ -217,7 +216,7 @@ async function queryGemini(model: LLM, systemPrompt: string, userPrompt: string,
     });
     try {
         const response = await gemini.models.generateContent({
-            model: model.id,
+            model: model.modelName,
             contents: userPrompt,
             config: {
                 systemInstruction: systemPrompt,
@@ -244,16 +243,17 @@ import Anthropic from '@anthropic-ai/sdk';
 /**
  * Generic function to query Claude safely with retries and timeout handling.
  */
-async function queryClaude(model: LLM, userPrompt: string, logFilename: string = logFilenames.misc): Promise<string> {
+async function queryClaude(model: LLM, systemPrompt: string, userPrompt: string, logFilename: string = logFilenames.misc): Promise<string> {
     const claude = new Anthropic({
-        apiKey: process.env['ANTHROPIC_API_KEY'],
+        apiKey: process.env.ANTHROPIC_API_KEY,
       });
     
     try {
         const message = await claude.messages.create({
             max_tokens: 1024,
             messages: [{ role: 'user', content: userPrompt }],
-            model: model.id,
+            model: model.modelName,
+            system: systemPrompt,
             temperature: model.temperature,
         });
 
@@ -277,17 +277,18 @@ import OpenAI from 'openai';
 /**
  * Generic function to query ChatGPT safely with retries and timeout handling.
  */
-async function queryChatGPT(model: LLM, userPrompt: string, logFilename: string = logFilenames.misc): Promise<string> {
+async function queryChatGPT(model: LLM, systemPrompt: string, userPrompt: string, logFilename: string = logFilenames.misc): Promise<string> {
 
     const chatgpt = new OpenAI(
-        {apiKey: process.env['OPENAI_API_KEY']}
+        {apiKey: process.env.OPENAI_API_KEY}
     );
 
     try {
         const message = await chatgpt.responses.create({
+            model: model.modelName,
+            temperature : model.temperature,
             input: userPrompt,
-            model: model.id,
-            temperature : model.temperature
+            instructions: systemPrompt,
         });
 
         writeToLog(logFilename, "ChatGPT Request", message);
