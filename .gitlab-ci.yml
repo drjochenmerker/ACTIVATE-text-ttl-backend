@@ -1,6 +1,7 @@
 stages:
     - lint
     - build
+    - test
 
 cache:
     key: ${CI_COMMIT_REF_SLUG}
@@ -20,3 +21,33 @@ build:
     script:
         - npm ci
         - npm run build
+
+test-docker:
+    stage: test
+    image: docker:latest
+    services:
+        - docker:dind
+    script:
+        - docker build -t feedback-parser:test .
+        - docker run -d --name feedback-parser-test feedback-parser:test
+        - sleep 5
+        - docker ps -a --filter name=feedback-parser-test
+        - |
+            STATUS=$(docker inspect -f '{{.State.Status}}' feedback-parser-test)
+            if [ "$STATUS" != "running" ]; then
+                echo "ERROR: Container is not running!"
+                docker logs feedback-parser-test
+                exit 1
+            fi
+        - sleep 10
+        - |
+            STATUS=$(docker inspect -f '{{.State.Status}}' feedback-parser-test)
+            RESTARTS=$(docker inspect -f '{{.RestartCount}}' feedback-parser-test)
+            if [ "$STATUS" != "running" ] || [ "$RESTARTS" -gt "0" ]; then
+                echo "ERROR: Container crashed or restarted!"
+                docker logs feedback-parser-test
+                exit 1
+            fi
+    after_script:
+        - docker stop feedback-parser-test || true
+        - docker rm feedback-parser-test || true
