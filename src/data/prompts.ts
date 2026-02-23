@@ -295,24 +295,77 @@ export const feedbackSystemPrompts = [
 //         "SPEAKER_05": "Arzt01"
 //     }
 // `;
+
+// gpt prompt
 export const roleSpeakerMappingTranscriptPrompt = `
     Task: Create a JSON mapping of speaker IDs to their identified roles.
 
     Instructions:
-    - Identify Roles: For every unique speaker ID in the transcript
-    - Role Numbering: Append "01" to the role name (e.g., "Doctor01"). If multiple people share a role, increment the number based on their first appearance (e.g., "Nurse01", "Nurse02").
-    - Key Formatting: The JSON keys must follow the format "speaker_XX" where the speaker IDs must match exactly those in the input.
+
+    1. Identify Roles:
+    - For every unique SPEAKER_XX in the transcript, determine the role from their first utterance.
+
+    2. Determine Order:
+    - Determine the chronological order of speakers based on their first appearance in the transcript.
+    - The speaker who appears first in the transcript must be mapped to "speaker_00".
+    - The second new speaker to appear must be mapped to "speaker_01", and so on.
+    - The numbering of the JSON keys MUST strictly follow the order of first appearance in the transcript.
+    - Ignore the numeric value in the original SPEAKER_XX label when determining order.
+
+    3. Role Numbering:
+    - Append "01" to each role name (e.g., "Doctor01").
+    - If multiple speakers share the same role, increment the number based on order of first appearance (e.g., "Nurse01", "Nurse02").
 
     Output Requirements:
-    - It is important to only return *ONLY* a valid JSON object.
-    - No preamble, no markdown blocks, and no additional text.
-
-    Example Output:
-    {
-        "speaker_00": "Doctor02",
-        "speaker_01": "Physiotherapist01"
-    }
+    - Return ONLY a valid JSON object.
+    - No explanation.
+    - No markdown.
+    - No additional text.
 `;
+// gemini prompt
+// export const roleSpeakerMappingTranscriptPrompt = `
+//     Task: Create a JSON mapping of speaker IDs to their identified roles based on their first appearance in the transcript.
+
+//     Instructions:
+//     1. Scan the transcript chronologically from start to finish.
+//     2. Identify each speaker ID (e.g., SPEAKER_02) the very first time they speak.
+//     3. Determine their role from that first utterance (e.g., "Patient", "Doctor").
+//     4. Mapping Rule: Assign the identified roles to the JSON keys "speaker_00", "speaker_01", etc., strictly in the order they FIRST appear in the text.
+//        - The first person to speak in the transcript ALWAYS becomes "speaker_00".
+//        - The second unique person to speak ALWAYS becomes "speaker_01", and so on.
+//     5. Role Numbering: Append "01" to the role name (e.g., "Doctor01"). If the same role is identified for a different speaker later, use "02".
+
+//     Output Requirements:
+//     - Return ONLY a valid JSON object.
+//     - The order of keys in the JSON must reflect the chronological first appearance of the speakers.
+//     - No preamble, no markdown blocks, and no additional text.
+
+//     Example:
+//     If SPEAKER_02 speaks first and is a Doctor, and SPEAKER_00 speaks second and is a Nurse:
+//     {
+//         "speaker_00": "Doctor01",
+//         "speaker_01": "Nurse01"
+//     }
+// `;
+
+// export const roleSpeakerMappingTranscriptPrompt = `
+//     Task: Create a JSON mapping of speaker IDs to their identified roles.
+
+//     Instructions:
+//     - Identify Roles: For every unique speaker ID in the transcript
+//     - Role Numbering: Append "01" to the role name (e.g., "Doctor01"). If multiple people share a role, increment the number based on their first appearance (e.g., "Nurse01", "Nurse02").
+//     - Key Formatting: The JSON keys must follow the format "speaker_XX" where the speaker IDs must match exactly those in the input.
+
+//     Output Requirements:
+//     - It is important to only return *ONLY* a valid JSON object.
+//     - No preamble, no markdown blocks, and no additional text.
+
+//     Example Output:
+//     {
+//         "speaker_00": "Doctor02",
+//         "speaker_01": "Physiotherapist01"
+//     }
+// `;
 
 export const ttlMergePrompts = [
     // merge prompt for entities

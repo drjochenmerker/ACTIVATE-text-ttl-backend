@@ -262,6 +262,9 @@ async function callPythonBackend(
  * returns the result directly
  */
 router.post("/audio/speaker-role-mapping", async (req, res) => {
+    // transcript is already cut transcript to first utterance of each speaker
+    // speaker id starts with 00 according to utterance, e.g. speaker_00, speaker_01, etc.
+    // this problem leads to llm problems as it cannot recognize the pattern and cannot map roles to speakers correctly
     const transcript = req.body.diarizedTranscript;
     if (!transcript) {
         res.status(200).json({
