@@ -184,6 +184,9 @@ export async function queryLLM(llm: LLM, systemPrompt: string, activityText: str
         case 'gemini':
             llmOutput = await queryGemini(llm, systemPrompt, activityText, logFilename);
             break;
+        case 'cortecs':
+            llmOutput = await queryCortecs(llm, systemPrompt, activityText, logFilename);
+            break;
         case 'chatgpt':
             llmOutput = await queryChatGPT(llm, systemPrompt, activityText, logFilename);
             break;
@@ -193,7 +196,7 @@ export async function queryLLM(llm: LLM, systemPrompt: string, activityText: str
         default:
             break;
     }
-    
+
     return parseLLMOutput(llmOutput);
 }
 
@@ -246,8 +249,8 @@ import Anthropic from '@anthropic-ai/sdk';
 async function queryClaude(model: LLM, systemPrompt: string, userPrompt: string, logFilename: string = logFilenames.misc): Promise<string> {
     const claude = new Anthropic({
         apiKey: process.env.ANTHROPIC_API_KEY,
-      });
-    
+    });
+
     try {
         const message = await claude.messages.create({
             max_tokens: 1024,
@@ -280,13 +283,12 @@ import OpenAI from 'openai';
 async function queryChatGPT(model: LLM, systemPrompt: string, userPrompt: string, logFilename: string = logFilenames.misc): Promise<string> {
 
     const chatgpt = new OpenAI(
-        {apiKey: process.env.OPENAI_API_KEY}
+        { apiKey: process.env.OPENAI_API_KEY }
     );
 
     try {
         const message = await chatgpt.responses.create({
             model: model.modelName,
-            temperature : model.temperature,
             input: userPrompt,
             instructions: systemPrompt,
         });
@@ -295,6 +297,31 @@ async function queryChatGPT(model: LLM, systemPrompt: string, userPrompt: string
         return message.output_text || 'error';
     } catch (error) {
         console.error('Error querying ChatGPT:', error);
+        return "error"
+    }
+}
+
+async function queryCortecs(model: LLM, systemPrompt: string, userPrompt: string, logFilename: string = logFilenames.misc): Promise<string> {
+    const cortecs = new OpenAI(
+        {
+            apiKey: process.env.CORTECS_API_KEY,
+            baseURL: 'https://api.cortecs.ai/v1',
+        }
+    );
+    try {
+        const completion = await cortecs.chat.completions.create({
+            model: model.modelName,
+            messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userPrompt }
+            ],
+            temperature: model.temperature,
+        });
+
+        writeToLog(logFilename, "Cortecs Request with model " + model.modelName, completion);
+        return completion.choices[0].message.content || 'error';
+    } catch (error) {
+        console.error('Error querying Cortecs with model ' + model.modelName + ':', error);
         return "error"
     }
 }
