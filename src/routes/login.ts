@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { writeToLog } from '../services/utils';
-import { logFilenames } from '../data/staticContent';
+import { writeToLog } from '../services/utils.js';
+import { logFilenames } from '../data/staticContent.js';
 import bcrypt from 'bcrypt';
 
 const router = Router();
