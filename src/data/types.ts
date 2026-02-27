@@ -11,7 +11,9 @@ type multiLanguageString = {
 // LLM type definition
 export type LLM = {
     id: string;
-    name: string;
-    endpoint: string;
+    modelName: string;
+    selectedProvider: string;
     description: multiLanguageString;
+    temperature: number;
+    organizationId: string | null;
 };

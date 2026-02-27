@@ -166,20 +166,38 @@ export function clearLog(filename: string): void {
 }
 
 /**
- * Generates a knowledge graph using no prompt engineering by querying the specified Large Language Model (LLM) endpoint.
+ * Queries the specified Large Language Model (LLM) endpoint.
  *
- * Selects the appropriate system prompt based on the `shot` parameter and sends a request to the
- * corresponding LLM service (OpenRouter, Gemini, or Azure). The response is parsed and returned as a string.
+ * Selects the appropriate LLM service based on the `selectedProvider` parameter and sends a request to the
+ * corresponding LLM service (Gemini, ChatGPT, or Claude). The response is parsed and returned as a string.
  *
  * @param llm - The LLM configuration object specifying the endpoint and model ID.
- * @param shot - Determines which system prompt to use (0 for zero-shot, otherwise one-shot).
+ * @param systemPrompt - The system prompt to use.
  * @param activityText - The activity description or context to provide to the LLM.
  * @param logFilename - (Optional) The filename to use for logging the request and response. Defaults to a miscellaneous log file.
- * @returns A promise that resolves to the generated TTL
- * @throws Will reject the promise if the LLM endpoint is unsupported.
+ * @returns A promise that resolves to the response from the LLM.
  */
-export async function requestKgGen(llm: LLM, systemPrompt: string, activityText: string, logFilename: string = logFilenames.misc): Promise<string> {
-    return parseLLMOutput(await queryGemini(llm.id, systemPrompt, activityText, logFilename));
+export async function queryLLM(llm: LLM, systemPrompt: string, activityText: string, logFilename: string = logFilenames.misc): Promise<string> {
+
+    let llmOutput: string = "";
+    switch (llm.selectedProvider) {
+        case 'gemini':
+            llmOutput = await queryGemini(llm, systemPrompt, activityText, logFilename);
+            break;
+        case 'cortecs':
+            llmOutput = await queryCortecs(llm, systemPrompt, activityText, logFilename);
+            break;
+        case 'chatgpt':
+            llmOutput = await queryChatGPT(llm, systemPrompt, activityText, logFilename);
+            break;
+        case 'claude':
+            llmOutput = await queryClaude(llm, systemPrompt, activityText, logFilename);
+            break;
+        default:
+            break;
+    }
+
+    return parseLLMOutput(llmOutput);
 }
 
 import 'dotenv/config';
@@ -187,7 +205,7 @@ import { GoogleGenAI } from '@google/genai';
 
 /**
  * Generic function to query Gemini
- * @param model gemini model id
+ * @param model gemini model
  * @param systemPrompt system prompt
  * @param userPrompt user prompt
  * @returns message or 'error'
@@ -195,23 +213,115 @@ import { GoogleGenAI } from '@google/genai';
 /**
  * Generic function to query Gemini safely with retries and timeout handling.
  */
-async function queryGemini(model: string, systemPrompt: string, userPrompt: string, logFilename: string = logFilenames.misc): Promise<string> {
+async function queryGemini(model: LLM, systemPrompt: string, userPrompt: string, logFilename: string = logFilenames.misc): Promise<string> {
     const gemini = new GoogleGenAI({
         apiKey: process.env.GEMINI_API_KEY,
     });
     try {
         const response = await gemini.models.generateContent({
-            model: model,
+            model: model.modelName,
             contents: userPrompt,
             config: {
                 systemInstruction: systemPrompt,
-                temperature: 0.2
+                temperature: model.temperature
             }
         });
         writeToLog(logFilename, "Gemini Request", response)
         return response.text || 'error'
     } catch (error) {
         console.error('Error querying Gemini:', error);
+        return "error"
+    }
+}
+
+import Anthropic from '@anthropic-ai/sdk';
+
+/**
+ * Generic function to query Claude
+ * @param model Claude model
+ * @param systemPrompt system prompt
+ * @param userPrompt user prompt
+ * @returns message or 'error'
+ */
+/**
+ * Generic function to query Claude safely with retries and timeout handling.
+ */
+async function queryClaude(model: LLM, systemPrompt: string, userPrompt: string, logFilename: string = logFilenames.misc): Promise<string> {
+    const claude = new Anthropic({
+        apiKey: process.env.ANTHROPIC_API_KEY,
+    });
+
+    try {
+        const message = await claude.messages.create({
+            max_tokens: 1024,
+            messages: [{ role: 'user', content: userPrompt }],
+            model: model.modelName,
+            system: systemPrompt,
+            temperature: model.temperature,
+        });
+
+        writeToLog(logFilename, "Claude Request", message)
+        return (message.content[0] as Anthropic.TextBlock).text || 'error'; // Type cast to avoid type errors
+    } catch (error) {
+        console.error('Error querying Claude:', error);
+        return "error"
+    }
+}
+
+import OpenAI from 'openai';
+
+/**
+ * Generic function to query ChatGPT
+ * @param model ChatGPT model
+ * @param systemPrompt system prompt
+ * @param userPrompt user prompt
+ * @returns message or 'error'
+ */
+/**
+ * Generic function to query ChatGPT safely with retries and timeout handling.
+ */
+async function queryChatGPT(model: LLM, systemPrompt: string, userPrompt: string, logFilename: string = logFilenames.misc): Promise<string> {
+
+    const chatgpt = new OpenAI(
+        { apiKey: process.env.OPENAI_API_KEY }
+    );
+
+    try {
+        const message = await chatgpt.responses.create({
+            model: model.modelName,
+            input: userPrompt,
+            instructions: systemPrompt,
+        });
+
+        writeToLog(logFilename, "ChatGPT Request", message);
+        return message.output_text || 'error';
+    } catch (error) {
+        console.error('Error querying ChatGPT:', error);
+        return "error"
+    }
+}
+
+async function queryCortecs(model: LLM, systemPrompt: string, userPrompt: string, logFilename: string = logFilenames.misc): Promise<string> {
+    const cortecs = new OpenAI(
+        {
+            apiKey: process.env.CORTECS_API_KEY,
+            baseURL: 'https://api.cortecs.ai/v1',
+        }
+    );
+    try {
+        const completion = await cortecs.chat.completions.create({
+            model: model.modelName,
+            messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userPrompt }
+            ],
+            temperature: model.temperature,
+        });
+
+        writeToLog(logFilename, "Cortecs Request with model " + model.modelName, completion);
+        return completion.choices[0].message.content || 'error';
+    } catch (error) {
+        console.error('Error querying Cortecs with model ' + model.modelName + ':', error);
         return "error"
     }
 }

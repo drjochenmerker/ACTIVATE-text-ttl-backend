@@ -1,10 +1,10 @@
 // src/routes/feedback.ts
 import { Router } from 'express';
 import { errorMessages, logFilenames } from '../data/staticContent.js';
-import { removeAtLines, requestKgGen, writeToLog } from '../services/utils.js';
+import { removeAtLines, queryLLM, writeToLog } from '../services/utils.js';
 import { validateTTLObject } from '../services/validator.js';
 import { feedbackSystemPrompts, settingGenerationPrompts, ttlMergePrompts } from '../data/prompts.js';
-import { geminiDetail } from '../data/resources.js';
+import { LLM } from '../data/types.js';
 
 const router = Router();
 
@@ -53,6 +53,12 @@ const router = Router();
  *               defaultRole:
  *                 type: string
  *                 description: The default role for participants in the simulation.
+ *               kgGenPrompt:
+ *                  type: string | null
+ *                  description: The special prompt to be used in the generation of the knowledge graph.
+ *               entityExtractionPrompt:
+ *                  type: string | null
+ *                  description: The special prompt to be used in the extraction of the entities.
  *           example:
  *             title: "Hospice Care Simulation"
  *             description: "A hospice room where a terminally ill patient is cared for by a nurse and visited by family members. The simulation focuses on end-of-life care communication and emotional support."
@@ -100,6 +106,11 @@ router.post('/settingGen', async (req, res) => {
     const description = req.body.description;
     const title = req.body.title;
     const defaultRole = req.body.defaultRole;
+    const llmDetailReq = req.body.llmDetail;
+    const llmDetail: LLM = JSON.parse(llmDetailReq);
+    const kgGenPrompt = req.body.kgGenPrompt == "" ? null : req.body.kgGenPrompt;
+    const entityExtractionPrompt = req.body.entityExtractionPrompt == "" ? null : req.body.entityExtractionPrompt;
+
     // Check if request has all required fields
     if (!description) {
         res.status(200).json({
@@ -114,8 +125,8 @@ router.post('/settingGen', async (req, res) => {
     }
     let result: string;
     writeToLog(logFilenames.feedback, "Starting Setting Generator", '');
-    // Setting Extraction
-    result = await requestKgGen(geminiDetail, settingGenerationPrompts[0],
+
+    result = await queryLLM(llmDetail, kgGenPrompt ?? settingGenerationPrompts[0],
         `Description: ${description}
         Title: ${title}`,
         logFilenames.feedback);
@@ -128,11 +139,11 @@ router.post('/settingGen', async (req, res) => {
     }
     generatedTTLObject.setting = result;
 
-    // Entity Extraction
-    result = await requestKgGen(geminiDetail, settingGenerationPrompts[1],
+    result = await queryLLM(llmDetail, entityExtractionPrompt ?? settingGenerationPrompts[1],
         `Description: ${description}
         Default Entity: ${defaultRole}`,
         logFilenames.feedback);
+
     if (result === 'error' || result.length === 0) {
         res.status(200).json({
             error: errorMessages.generationFailed,
@@ -142,7 +153,7 @@ router.post('/settingGen', async (req, res) => {
     generatedTTLObject.entities = result;
 
     // Validate generated TTL
-    const validatorRes = await validateTTLObject(generatedTTLObject, logFilenames.feedback, geminiDetail)
+    const validatorRes = await validateTTLObject(generatedTTLObject, logFilenames.feedback, llmDetail)
     if (!validatorRes) {
         res.status(200).json({
             error: errorMessages.validationFailed,
@@ -278,8 +289,13 @@ router.post('/submit', async (req, res) => {
     const feedbackSetting = req.body.setting;
     const settingEntities = JSON.stringify(req.body.entities) || [];
     const feedback = JSON.stringify(req.body.feedback);
+    const llmDetailReq = req.body.llmDetail;
+    const llmDetail: LLM = JSON.parse(llmDetailReq);
+    const entityExtractionPrompt = req.body.entityExtractionPrompt == "" ? null : req.body.entityExtractionPrompt;
+    const tensionExtractionPrompt = req.body.tensionExtractionPrompt == "" ? null : req.body.tensionExtractionPrompt;
+
     // Check if request has all required fields
-    if (!feedbackSetting || !feedback || !geminiDetail) {
+    if (!feedbackSetting || !feedback || !llmDetail) {
         res.status(200).json({
             error: errorMessages.missingFields,
         });
@@ -294,11 +310,12 @@ router.post('/submit', async (req, res) => {
     writeToLog(logFilenames.feedback, "Starting Submission Parser", '');
 
     // Entity Extraction
-    result = await requestKgGen(geminiDetail, feedbackSystemPrompts[0], `
-            Setting: ${feedbackSetting}
-            Existing Entities: ${settingEntities}
-            Feedback: ${feedback}
-        `, logFilenames.feedback);
+    result = await queryLLM(llmDetail, entityExtractionPrompt ?? feedbackSystemPrompts[0], `
+        Setting: ${feedbackSetting}
+        Existing Entities: ${settingEntities}
+        Feedback: ${feedback}
+    `, logFilenames.feedback);
+
     if (result === 'error' || result.length === 0) {
         res.status(200).json({
             error: errorMessages.generationFailed,
@@ -308,12 +325,13 @@ router.post('/submit', async (req, res) => {
     generatedTTLObject.entities = result;
 
     // Tension Extraction
-    result = await requestKgGen(geminiDetail, feedbackSystemPrompts[1], `
-            Setting: ${feedbackSetting}
-            Existing Entities: ${settingEntities} and ${generatedTTLObject.entities}
-            Feedback: ${feedback}
-            Timestamp: ${new Date().toISOString()}
-        `, logFilenames.feedback);
+    result = await queryLLM(llmDetail, tensionExtractionPrompt ?? feedbackSystemPrompts[1], `
+        Setting: ${feedbackSetting}
+        Existing Entities: ${settingEntities} and ${generatedTTLObject.entities}
+        Feedback: ${feedback}
+        Timestamp: ${new Date().toISOString()}
+    `, logFilenames.feedback);
+
     if (result === 'error' || result.length === 0) {
         res.status(200).json({
             error: errorMessages.generationFailed,
@@ -323,7 +341,7 @@ router.post('/submit', async (req, res) => {
     generatedTTLObject.tensions = result;
 
     // Validate generated TTL
-    const validatorRes = await validateTTLObject(generatedTTLObject, logFilenames.feedback, geminiDetail)
+    const validatorRes = await validateTTLObject(generatedTTLObject, logFilenames.feedback, llmDetail)
     if (!validatorRes) {
         res.status(200).json({
             error: errorMessages.validationFailed,
@@ -407,8 +425,13 @@ router.post('/pool', async (req, res) => {
     writeToLog(logFilenames.feedback, "Trying to pool results: ", JSON.stringify(req.body));
     const entityPool = req.body.entities;
     const tensionPool = req.body.tensions;
+    const llmDetailReq = req.body.llmDetail;
+    const llmDetail: LLM = JSON.parse(llmDetailReq);
+    const turtleFileMergePrompt = req.body.turtleFileMergePrompt == "" ? null : req.body.turtleFileMergePrompt  ;
+    const tensionExtractionPrompt = req.body.tensionExtractionPrompt == "" ? null : req.body.tensionExtractionPrompt;
+
     // Check if request has all required fields
-    if (!entityPool || !tensionPool || !geminiDetail) {
+    if (!entityPool || !tensionPool || !llmDetail) {
         res.status(200).json({
             error: errorMessages.missingFields,
         });
@@ -424,7 +447,8 @@ router.post('/pool', async (req, res) => {
     writeToLog(logFilenames.feedback, "Starting semantic merging process", '');
 
     // Entity Merge
-    result = await requestKgGen(geminiDetail, ttlMergePrompts[0], entityPool, logFilenames.feedback);
+    result = await queryLLM(llmDetail, turtleFileMergePrompt ?? ttlMergePrompts[0], entityPool, logFilenames.feedback);
+
     if (result === 'error' || result.length === 0) {
         res.status(200).json({
             error: errorMessages.generationFailed,
@@ -434,11 +458,12 @@ router.post('/pool', async (req, res) => {
     generatedTTLObject.entities = result;
 
     // Tension Merge
-    result = await requestKgGen(geminiDetail,
-        feedbackSystemPrompts[1],
+    result = await queryLLM(llmDetail,
+        tensionExtractionPrompt ?? feedbackSystemPrompts[1],
         `Tensions: ${tensionPool}
         Entities: ${generatedTTLObject.entities}`,
         logFilenames.feedback);
+
     if (result === 'error' || result.length === 0) {
         res.status(200).json({
             error: errorMessages.generationFailed,
@@ -448,7 +473,7 @@ router.post('/pool', async (req, res) => {
     generatedTTLObject.tensions = result;
 
     // Validate generated TTL
-    const validatorRes = await validateTTLObject(generatedTTLObject, logFilenames.feedback, geminiDetail)
+    const validatorRes = await validateTTLObject(generatedTTLObject, logFilenames.feedback, llmDetail)
     if (!validatorRes) {
         res.status(200).json({
             error: errorMessages.validationFailed,
