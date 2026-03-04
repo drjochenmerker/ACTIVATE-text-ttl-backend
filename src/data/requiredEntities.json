@@ -1,0 +1,57 @@
+{
+  "subjects": [
+    {
+      "id": "Pflege01",
+      "labels": {
+        "de": "Pflegefachperson 1",
+        "en": "Care Staff 1",
+        "sv": "Vårdpersonal 1"
+      }
+    },
+    {
+      "id": "Pflege02",
+      "labels": {
+        "de": "Pflegefachperson 2",
+        "en": "Care Staff 2",
+        "sv": "Vårdpersonal 2"
+      }
+    },
+    {
+      "id": "Arzt01",
+      "labels": {
+        "de": "Arzt/Ärztin 1",
+        "en": "Physician 1",
+        "sv": "Läkare 1"
+      }
+    },
+    {
+      "id": "Arzt02",
+      "labels": {
+        "de": "Arzt/Ärztin 2",
+        "en": "Physician 2",
+        "sv": "Läkare 2"
+      }
+    },
+    {
+      "id": "Physiotherapeut01",
+      "labels": {
+        "de": "Physiotherapeut/in 1",
+        "en": "Physiotherapist 1",
+        "sv": "Fysioterapeut 1"
+      }
+    },
+    {
+      "id": "Physiotherapeut02",
+      "labels": {
+        "de": "Physiotherapeut/in 2",
+        "en": "Physiotherapist 2",
+        "sv": "Fysioterapeut 2"
+      }
+    }
+  ],
+  "objects": [],
+  "instruments": [],
+  "rules": [],
+  "communities": [],
+  "divisionsOfLabour": []
+}

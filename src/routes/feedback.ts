@@ -2,6 +2,7 @@
 import { Router } from 'express';
 import { errorMessages, logFilenames } from '../data/staticContent.js';
 import { removeAtLines, queryLLM, writeToLog } from '../services/utils.js';
+import { getPredefinedEntitiesForPrompt } from '../data/requiredEntities.js';
 import { validateTTLObject } from '../services/validator.js';
 import { feedbackSystemPrompts, settingGenerationPrompts, ttlMergePrompts } from '../data/prompts.js';
 import { LLM } from '../data/types.js';
@@ -139,7 +140,12 @@ router.post('/settingGen', async (req, res) => {
     }
     generatedTTLObject.setting = result;
 
-    result = await queryLLM(llmDetail, entityAssignmentPrompt ?? settingGenerationPrompts[1],
+    // Get predefined entities for prompt context
+    const predefinedEntities = getPredefinedEntitiesForPrompt();
+    const entityPrompt = (entityAssignmentPrompt ?? settingGenerationPrompts[1])
+        .replace('{{PREDEFINED_ENTITIES}}', predefinedEntities);
+
+    result = await queryLLM(llmDetail, entityPrompt,
         `Description: ${description}
         Default Entity: ${defaultRole}`,
         logFilenames.feedback);
