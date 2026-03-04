@@ -53,7 +53,7 @@ const router = Router();
  *               defaultRole:
  *                 type: string
  *                 description: The default role for participants in the simulation.
- *               kgGenPrompt:
+ *               knowledgeGraphGenerationPrompt:
  *                  type: string | null
  *                  description: The special prompt to be used in the generation of the knowledge graph.
  *               entityAssignmentPrompt:
@@ -108,7 +108,7 @@ router.post('/settingGen', async (req, res) => {
     const defaultRole = req.body.defaultRole;
     const llmDetailReq = req.body.llmDetail;
     const llmDetail: LLM = JSON.parse(llmDetailReq);
-    const kgGenPrompt = req.body.kgGenPrompt == "" ? null : req.body.kgGenPrompt;
+    const knowledgeGraphGenerationPrompt = req.body.knowledgeGraphGenerationPrompt == "" ? null : req.body.knowledgeGraphGenerationPrompt;
     const entityAssignmentPrompt = req.body.entityAssignmentPrompt == "" ? null : req.body.entityAssignmentPrompt;
 
     // Check if request has all required fields
@@ -126,7 +126,7 @@ router.post('/settingGen', async (req, res) => {
     let result: string;
     writeToLog(logFilenames.feedback, "Starting Setting Generator", '');
 
-    result = await queryLLM(llmDetail, kgGenPrompt ?? settingGenerationPrompts[0],
+    result = await queryLLM(llmDetail, knowledgeGraphGenerationPrompt ?? settingGenerationPrompts[0],
         `Description: ${description}
         Title: ${title}`,
         logFilenames.feedback);
