@@ -16,11 +16,32 @@ export interface RequiredEntitiesStructure {
     divisionsOfLabour: RequiredEntity[];
 }
 
+function parseRequiredEntitiesOrFallback(customPredefinedEntitiesJson?: string): RequiredEntitiesStructure {
+    if (!customPredefinedEntitiesJson || !customPredefinedEntitiesJson.trim()) {
+        return requiredEntitiesData as RequiredEntitiesStructure;
+    }
+
+    try {
+        const parsed = JSON.parse(customPredefinedEntitiesJson) as Partial<RequiredEntitiesStructure>;
+        return {
+            subjects: parsed.subjects ?? [],
+            objects: parsed.objects ?? [],
+            instruments: parsed.instruments ?? [],
+            rules: parsed.rules ?? [],
+            communities: parsed.communities ?? [],
+            divisionsOfLabour: parsed.divisionsOfLabour ?? [],
+        };
+    } catch (error) {
+        console.error('Invalid predefinedEntities JSON, using default requiredEntities.json', error);
+        return requiredEntitiesData as RequiredEntitiesStructure;
+    }
+}
+
 /**
  * Generates a formatted list of predefined entities for the LLM prompt
  * @returns Formatted string listing all predefined entities with their classes
  */
-export function getPredefinedEntitiesForPrompt(): string {
+export function getPredefinedEntitiesForPrompt(customPredefinedEntitiesJson?: string): string {
     const classMap: { [key: string]: string } = {
         'subjects': 'Subject',
         'objects': 'Object',
@@ -31,7 +52,7 @@ export function getPredefinedEntitiesForPrompt(): string {
     };
 
     let entityList = '';
-    const data = requiredEntitiesData as RequiredEntitiesStructure;
+    const data = parseRequiredEntitiesOrFallback(customPredefinedEntitiesJson);
     
     for (const [classKey, className] of Object.entries(classMap)) {
         const entities = data[classKey as keyof RequiredEntitiesStructure] || [];

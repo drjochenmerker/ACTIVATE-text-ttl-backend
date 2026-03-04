@@ -111,6 +111,7 @@ router.post('/settingGen', async (req, res) => {
     const llmDetail: LLM = JSON.parse(llmDetailReq);
     const knowledgeGraphGenerationPrompt = req.body.knowledgeGraphGenerationPrompt == "" ? null : req.body.knowledgeGraphGenerationPrompt;
     const entityAssignmentPrompt = req.body.entityAssignmentPrompt == "" ? null : req.body.entityAssignmentPrompt;
+    const predefinedEntities = req.body.predefinedEntities == "" ? null : req.body.predefinedEntities;
 
     // Check if request has all required fields
     if (!description) {
@@ -141,9 +142,9 @@ router.post('/settingGen', async (req, res) => {
     generatedTTLObject.setting = result;
 
     // Get predefined entities for prompt context
-    const predefinedEntities = getPredefinedEntitiesForPrompt();
+    const predefinedEntitiesForPrompt = getPredefinedEntitiesForPrompt(predefinedEntities ?? undefined);
     const entityPrompt = (entityAssignmentPrompt ?? settingGenerationPrompts[1])
-        .replace('{{PREDEFINED_ENTITIES}}', predefinedEntities);
+        .replace('{{PREDEFINED_ENTITIES}}', predefinedEntitiesForPrompt);
 
     result = await queryLLM(llmDetail, entityPrompt,
         `Description: ${description}
