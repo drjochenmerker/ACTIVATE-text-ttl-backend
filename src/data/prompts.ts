@@ -55,7 +55,10 @@ export const settingGenerationPrompts = [
 
         - "DivisionOfLabour" (How can different people contribute to the activity? Hierarchy, Role, Leadership, Territorial attitude etc.).
 
-        You will however, always and without exeption add at least the following entities of the class "Subject": "Pflege01" (Care Staff), "Pflege02", "Arzt01" (Physician), "Arzt02", and "Physiotherapeut01" (Physiotherapist), "Physiotherapeut02".
+        IMPORTANT: The following base entities will be created automatically and should NOT be included in your output:
+        {{PREDEFINED_ENTITIES}}
+
+        Focus on extracting additional entities relevant to the specific simulation scenario that are not already part of these predefined base entities.
 
         If given a default entity, you will add it as a Subject entity and generate fitting labels. 
         If no default entity is given, generate the entity "Instructor" of the type Subject. 

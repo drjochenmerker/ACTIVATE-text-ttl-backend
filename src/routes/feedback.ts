@@ -2,6 +2,7 @@
 import { Router } from 'express';
 import { errorMessages, logFilenames } from '../data/staticContent.js';
 import { removeAtLines, queryLLM, writeToLog } from '../services/utils.js';
+import { getPredefinedEntitiesForPrompt } from '../data/requiredEntities.js';
 import { validateTTLObject } from '../services/validator.js';
 import { feedbackSystemPrompts, settingGenerationPrompts, ttlMergePrompts } from '../data/prompts.js';
 import { LLM } from '../data/types.js';
@@ -53,12 +54,12 @@ const router = Router();
  *               defaultRole:
  *                 type: string
  *                 description: The default role for participants in the simulation.
- *               kgGenPrompt:
+ *               knowledgeGraphGenerationPrompt:
  *                  type: string | null
  *                  description: The special prompt to be used in the generation of the knowledge graph.
- *               entityExtractionPrompt:
+ *               entityAssignmentPrompt:
  *                  type: string | null
- *                  description: The special prompt to be used in the extraction of the entities.
+ *                  description: The special prompt to be used in the assignment of the entities.
  *           example:
  *             title: "Hospice Care Simulation"
  *             description: "A hospice room where a terminally ill patient is cared for by a nurse and visited by family members. The simulation focuses on end-of-life care communication and emotional support."
@@ -108,8 +109,9 @@ router.post('/settingGen', async (req, res) => {
     const defaultRole = req.body.defaultRole;
     const llmDetailReq = req.body.llmDetail;
     const llmDetail: LLM = JSON.parse(llmDetailReq);
-    const kgGenPrompt = req.body.kgGenPrompt == "" ? null : req.body.kgGenPrompt;
-    const entityExtractionPrompt = req.body.entityExtractionPrompt == "" ? null : req.body.entityExtractionPrompt;
+    const knowledgeGraphGenerationPrompt = req.body.knowledgeGraphGenerationPrompt == "" ? null : req.body.knowledgeGraphGenerationPrompt;
+    const entityAssignmentPrompt = req.body.entityAssignmentPrompt == "" ? null : req.body.entityAssignmentPrompt;
+    const predefinedEntities = req.body.predefinedEntities == "" ? null : req.body.predefinedEntities;
 
     // Check if request has all required fields
     if (!description) {
@@ -126,7 +128,7 @@ router.post('/settingGen', async (req, res) => {
     let result: string;
     writeToLog(logFilenames.feedback, "Starting Setting Generator", '');
 
-    result = await queryLLM(llmDetail, kgGenPrompt ?? settingGenerationPrompts[0],
+    result = await queryLLM(llmDetail, knowledgeGraphGenerationPrompt ?? settingGenerationPrompts[0],
         `Description: ${description}
         Title: ${title}`,
         logFilenames.feedback);
@@ -139,7 +141,12 @@ router.post('/settingGen', async (req, res) => {
     }
     generatedTTLObject.setting = result;
 
-    result = await queryLLM(llmDetail, entityExtractionPrompt ?? settingGenerationPrompts[1],
+    // Get predefined entities for prompt context
+    const predefinedEntitiesForPrompt = getPredefinedEntitiesForPrompt(predefinedEntities ?? undefined);
+    const entityPrompt = (entityAssignmentPrompt ?? settingGenerationPrompts[1])
+        .replace('{{PREDEFINED_ENTITIES}}', predefinedEntitiesForPrompt);
+
+    result = await queryLLM(llmDetail, entityPrompt,
         `Description: ${description}
         Default Entity: ${defaultRole}`,
         logFilenames.feedback);
