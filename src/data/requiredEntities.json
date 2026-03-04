@@ -1,55 +1,176 @@
 {
   "subjects": [
     {
-      "id": "Pflege01",
+      "id": "Nurse01",
       "labels": {
-        "de": "Pflegefachperson 1",
-        "en": "Care Staff 1",
-        "sv": "Vårdpersonal 1"
+        "de": "Krankenpfleger 01",
+        "en": "Nurse 01",
+        "sv": "Sjuksköterska 01"
       }
     },
     {
-      "id": "Pflege02",
+      "id": "Nurse02",
       "labels": {
-        "de": "Pflegefachperson 2",
-        "en": "Care Staff 2",
-        "sv": "Vårdpersonal 2"
+        "de": "Krankenpfleger 02",
+        "en": "Nurse 02",
+        "sv": "Sjuksköterska 02"
       }
     },
     {
-      "id": "Arzt01",
+      "id": "Nurse03",
       "labels": {
-        "de": "Arzt/Ärztin 1",
-        "en": "Physician 1",
-        "sv": "Läkare 1"
+        "de": "Krankenpfleger 03",
+        "en": "Nurse 03",
+        "sv": "Sjuksköterska 03"
       }
     },
     {
-      "id": "Arzt02",
+      "id": "Nurse04",
       "labels": {
-        "de": "Arzt/Ärztin 2",
-        "en": "Physician 2",
-        "sv": "Läkare 2"
+        "de": "Krankenpfleger 04",
+        "en": "Nurse 04",
+        "sv": "Sjuksköterska 04"
       }
     },
     {
-      "id": "Physiotherapeut01",
+      "id": "OccupationalTherapist01",
       "labels": {
-        "de": "Physiotherapeut/in 1",
-        "en": "Physiotherapist 1",
-        "sv": "Fysioterapeut 1"
+        "de": "Ergotherapeut 01",
+        "en": "Occupational Therapist 01",
+        "sv": "Arbetsterapeut 01"
       }
     },
     {
-      "id": "Physiotherapeut02",
+      "id": "OccupationalTherapist02",
       "labels": {
-        "de": "Physiotherapeut/in 2",
-        "en": "Physiotherapist 2",
-        "sv": "Fysioterapeut 2"
+        "de": "Ergotherapeut 02",
+        "en": "Occupational Therapist 02",
+        "sv": "Arbetsterapeut 02"
+      }
+    },
+    {
+      "id": "OccupationalTherapist03",
+      "labels": {
+        "de": "Ergotherapeut 03",
+        "en": "Occupational Therapist 03",
+        "sv": "Arbetsterapeut 03"
+      }
+    },
+    {
+      "id": "OccupationalTherapist04",
+      "labels": {
+        "de": "Ergotherapeut 04",
+        "en": "Occupational Therapist 04",
+        "sv": "Arbetsterapeut 04"
+      }
+    },
+    {
+      "id": "Pharmacist01",
+      "labels": {
+        "de": "Apotheker 01",
+        "en": "Pharmacist 01",
+        "sv": "Farmaceut 01"
+      }
+    },
+    {
+      "id": "Pharmacist02",
+      "labels": {
+        "de": "Apotheker 02",
+        "en": "Pharmacist 02",
+        "sv": "Farmaceut 02"
+      }
+    },
+    {
+      "id": "Pharmacist03",
+      "labels": {
+        "de": "Apotheker 03",
+        "en": "Pharmacist 03",
+        "sv": "Farmaceut 03"
+      }
+    },
+    {
+      "id": "Pharmacist04",
+      "labels": {
+        "de": "Apotheker 04",
+        "en": "Pharmacist 04",
+        "sv": "Farmaceut 04"
+      }
+    },
+    {
+      "id": "Physician01",
+      "labels": {
+        "de": "Arzt 01",
+        "en": "Physician 01",
+        "sv": "Läkare 01"
+      }
+    },
+    {
+      "id": "Physician02",
+      "labels": {
+        "de": "Arzt 02",
+        "en": "Physician 02",
+        "sv": "Läkare 02"
+      }
+    },
+    {
+      "id": "Physician03",
+      "labels": {
+        "de": "Arzt 03",
+        "en": "Physician 03",
+        "sv": "Läkare 03"
+      }
+    },
+    {
+      "id": "Physician04",
+      "labels": {
+        "de": "Arzt 04",
+        "en": "Physician 04",
+        "sv": "Läkare 04"
+      }
+    },
+    {
+      "id": "Physiotherapist01",
+      "labels": {
+        "de": "Physiotherapeut 01",
+        "en": "Physiotherapist 01",
+        "sv": "Fysioterapeut 01"
+      }
+    },
+    {
+      "id": "Physiotherapist02",
+      "labels": {
+        "de": "Physiotherapeut 02",
+        "en": "Physiotherapist 02",
+        "sv": "Fysioterapeut 02"
+      }
+    },
+    {
+      "id": "Physiotherapist03",
+      "labels": {
+        "de": "Physiotherapeut 03",
+        "en": "Physiotherapist 03",
+        "sv": "Fysioterapeut 03"
+      }
+    },
+    {
+      "id": "Physiotherapist04",
+      "labels": {
+        "de": "Physiotherapeut 04",
+        "en": "Physiotherapist 04",
+        "sv": "Fysioterapeut 04"
       }
     }
   ],
-  "objects": [],
+  "objects": [
+    {
+      "id": "OpioidBehandlung",
+      "labels": {
+        "de": "Opioid-Behandlung",
+        "en": "Opioid Treatment",
+        "sv": "Opioidbehandling"
+      }
+    }
+  ],
   "instruments": [],
   "rules": [],
   "communities": [],
