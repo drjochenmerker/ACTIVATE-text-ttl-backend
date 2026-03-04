@@ -56,9 +56,9 @@ const router = Router();
  *               kgGenPrompt:
  *                  type: string | null
  *                  description: The special prompt to be used in the generation of the knowledge graph.
- *               entityExtractionPrompt:
+ *               entityAssignmentPrompt:
  *                  type: string | null
- *                  description: The special prompt to be used in the extraction of the entities.
+ *                  description: The special prompt to be used in the assignment of the entities.
  *           example:
  *             title: "Hospice Care Simulation"
  *             description: "A hospice room where a terminally ill patient is cared for by a nurse and visited by family members. The simulation focuses on end-of-life care communication and emotional support."
@@ -109,7 +109,7 @@ router.post('/settingGen', async (req, res) => {
     const llmDetailReq = req.body.llmDetail;
     const llmDetail: LLM = JSON.parse(llmDetailReq);
     const kgGenPrompt = req.body.kgGenPrompt == "" ? null : req.body.kgGenPrompt;
-    const entityExtractionPrompt = req.body.entityExtractionPrompt == "" ? null : req.body.entityExtractionPrompt;
+    const entityAssignmentPrompt = req.body.entityAssignmentPrompt == "" ? null : req.body.entityAssignmentPrompt;
 
     // Check if request has all required fields
     if (!description) {
@@ -139,7 +139,7 @@ router.post('/settingGen', async (req, res) => {
     }
     generatedTTLObject.setting = result;
 
-    result = await queryLLM(llmDetail, entityExtractionPrompt ?? settingGenerationPrompts[1],
+    result = await queryLLM(llmDetail, entityAssignmentPrompt ?? settingGenerationPrompts[1],
         `Description: ${description}
         Default Entity: ${defaultRole}`,
         logFilenames.feedback);
