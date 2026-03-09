@@ -3,11 +3,28 @@ import { Router } from 'express';
 import { errorMessages, logFilenames } from '../data/staticContent.js';
 import { removeAtLines, queryLLM, writeToLog } from '../services/utils.js';
 import { getPredefinedEntitiesForPrompt } from '../data/requiredEntities.js';
+import type { LLMQueryResult } from '../services/utils.js';
 import { validateTTLObject } from '../services/validator.js';
 import { feedbackSystemPrompts, settingGenerationPrompts, ttlMergePrompts } from '../data/prompts.js';
 import { LLM } from '../data/types.js';
 
 const router = Router();
+
+function buildLlmErrorResponse(
+    baseError: string | { en?: string; de?: string; sv?: string },
+    llmError: string
+) {
+    // Convert string to multilingual object if needed
+    const baseErrorObject = typeof baseError === 'string'
+        ? { en: baseError, de: baseError, sv: baseError }
+        : baseError;
+    const normalizedError = llmError && llmError.trim().length > 0 ? llmError : 'empty-response';
+
+    return {
+        error: baseErrorObject,
+        llmError: normalizedError,
+    };
+}
 
 /**
  * @swagger
