@@ -341,7 +341,13 @@ router.post('/submit', async (req, res) => {
     // Check if all feedback answers are filled
     const feedbackData = JSON.parse(feedback);
     if (feedbackData.data && Array.isArray(feedbackData.data)) {
-        const hasEmptyAnswers = feedbackData.data.some((item: any) => !item.answer || item.answer.trim() === '');
+        const hasEmptyAnswers = feedbackData.data.some((item: unknown) => {
+            if (typeof item === 'object' && item !== null && 'answer' in item) {
+                const answer = (item as { answer: unknown }).answer;
+                return typeof answer !== 'string' || answer.trim() === '';
+            }
+            return true;
+        });
         if (hasEmptyAnswers) {  
                 res.status(400).json({
                 error: errorMessages.missingFields,
