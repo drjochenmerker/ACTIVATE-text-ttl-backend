@@ -26,11 +26,11 @@ function buildLlmErrorResponse(
     };
 }
 
-function isLLMQueryResult(obj: any): obj is LLMQueryResult {
-    return obj && 'ok' in obj && 'error' in obj;
+function isLLMQueryResult(obj: unknown): obj is LLMQueryResult {
+    return typeof obj === 'object' && obj !== null && 'ok' in obj && 'error' in obj;
 }
 
-function hasLLMError(obj: any): obj is LLMQueryResult {
+function hasLLMError(obj: unknown): obj is LLMQueryResult {
     return isLLMQueryResult(obj) && !obj.ok;
 }
 
