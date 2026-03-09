@@ -342,7 +342,7 @@ router.post('/submit', async (req, res) => {
     const feedbackData = JSON.parse(feedback);
     if (feedbackData.data && Array.isArray(feedbackData.data)) {
         const hasEmptyAnswers = feedbackData.data.some((item: any) => !item.answer || item.answer.trim() === '');
-        if (hasEmptyAnswers || !feedbackSetting || !feedback || !llmDetail) {  
+        if (hasEmptyAnswers) {  
                 res.status(400).json({
                 error: errorMessages.missingFields,
             });
