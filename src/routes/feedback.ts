@@ -484,7 +484,7 @@ router.post('/pool', async (req, res) => {
 
     // Check if request has all required fields
     if (!entityPool || !tensionPool || !llmDetail) {
-        res.status(200).json({
+        res.status(400).json({
             error: errorMessages.missingFields,
         });
         return;
@@ -496,40 +496,43 @@ router.post('/pool', async (req, res) => {
         tensions: '',
     }
     let result: string;
+    let llmResult: LLMQueryResult;
     writeToLog(logFilenames.feedback, "Starting semantic merging process", '');
 
     // Entity Merge
-    result = await queryLLM(llmDetail, turtleFileMergePrompt ?? ttlMergePrompts[0], entityPool, logFilenames.feedback);
+    llmResult = await queryLLM(llmDetail, turtleFileMergePrompt ?? ttlMergePrompts[0], entityPool, logFilenames.feedback);
 
-    if (result === 'error' || result.length === 0) {
-        res.status(200).json({
-            error: errorMessages.generationFailed,
-        });
+    if (!llmResult.ok || !llmResult.response) {
+        res.status(500).json(buildLlmErrorResponse(errorMessages.generationFailed, llmResult.error || 'error'));
         return;
     }
+    result = llmResult.response;
     generatedTTLObject.entities = result;
 
     // Tension Merge
-    result = await queryLLM(llmDetail,
+    llmResult = await queryLLM(llmDetail,
         tensionExtractionPrompt ?? feedbackSystemPrompts[1],
         `Tensions: ${tensionPool}
         Entities: ${generatedTTLObject.entities}`,
         logFilenames.feedback);
 
-    if (result === 'error' || result.length === 0) {
-        res.status(200).json({
-            error: errorMessages.generationFailed,
-        });
+    if (!llmResult.ok || !llmResult.response) {
+        res.status(500).json(buildLlmErrorResponse(errorMessages.generationFailed, llmResult.error || 'error'));
         return;
     }
+    result = llmResult.response;
     generatedTTLObject.tensions = result;
 
     // Validate generated TTL
     const validatorRes = await validateTTLObject(generatedTTLObject, logFilenames.feedback, llmDetail)
     if (!validatorRes) {
-        res.status(200).json({
+        res.status(500).json({
             error: errorMessages.validationFailed,
         });
+        return;
+    }
+    if (hasLLMError(validatorRes)) {
+        res.status(500).json(buildLlmErrorResponse(errorMessages.validationFailed, validatorRes.error || 'error'));
         return;
     }
     writeToLog(logFilenames.feedback, "Generated TTL", validatorRes.entities + "\n#####\n" + validatorRes.tensions);
