@@ -26,6 +26,14 @@ function buildLlmErrorResponse(
     };
 }
 
+function isLLMQueryResult(obj: any): obj is LLMQueryResult {
+    return obj && 'ok' in obj && 'error' in obj;
+}
+
+function hasLLMError(obj: any): obj is LLMQueryResult {
+    return isLLMQueryResult(obj) && !obj.ok;
+}
+
 /**
  * @swagger
  * /api/feedback/settingGen:
@@ -132,7 +140,7 @@ router.post('/settingGen', async (req, res) => {
 
     // Check if request has all required fields
     if (!description) {
-        res.status(200).json({
+        res.status(400).json({
             error: errorMessages.missingFields,
         });
         return;
@@ -143,19 +151,19 @@ router.post('/settingGen', async (req, res) => {
         entities: '',
     }
     let result: string;
+    let llmResult: LLMQueryResult;
     writeToLog(logFilenames.feedback, "Starting Setting Generator", '');
 
-    result = await queryLLM(llmDetail, knowledgeGraphGenerationPrompt ?? settingGenerationPrompts[0],
+    llmResult = await queryLLM(llmDetail, knowledgeGraphGenerationPrompt ?? settingGenerationPrompts[0],
         `Description: ${description}
         Title: ${title}`,
         logFilenames.feedback);
 
-    if (result === 'error' || result.length === 0) {
-        res.status(200).json({
-            error: errorMessages.generationFailed,
-        });
+    if (!llmResult.ok || !llmResult.response) {
+        res.status(500).json(buildLlmErrorResponse(errorMessages.generationFailed, llmResult.error || 'error'));
         return;
     }
+    result = llmResult.response;
     generatedTTLObject.setting = result;
 
     // Get predefined entities for prompt context
@@ -163,27 +171,31 @@ router.post('/settingGen', async (req, res) => {
     const entityPrompt = (entityAssignmentPrompt ?? settingGenerationPrompts[1])
         .replace('{{PREDEFINED_ENTITIES}}', predefinedEntitiesForPrompt);
 
-    result = await queryLLM(llmDetail, entityPrompt,
+    llmResult = await queryLLM(llmDetail, entityPrompt,
         `Description: ${description}
         Default Entity: ${defaultRole}`,
         logFilenames.feedback);
 
-    if (result === 'error' || result.length === 0) {
-        res.status(200).json({
-            error: errorMessages.generationFailed,
-        });
+    if (!llmResult.ok || !llmResult.response) {
+        res.status(500).json(buildLlmErrorResponse(errorMessages.generationFailed, llmResult.error || 'error'));
         return;
     }
+    result = llmResult.response;
     generatedTTLObject.entities = result;
 
     // Validate generated TTL
     const validatorRes = await validateTTLObject(generatedTTLObject, logFilenames.feedback, llmDetail)
     if (!validatorRes) {
-        res.status(200).json({
+        res.status(500).json({
             error: errorMessages.validationFailed,
         });
         return;
     }
+    if (hasLLMError(validatorRes)) {
+        res.status(500).json(buildLlmErrorResponse(errorMessages.validationFailed, validatorRes.error || 'error'));
+        return;
+    }
+
     // Merge and return
     writeToLog(logFilenames.feedback, "Generated TTL", validatorRes.setting + "\n" + removeAtLines(validatorRes.entities));
     res.json({
