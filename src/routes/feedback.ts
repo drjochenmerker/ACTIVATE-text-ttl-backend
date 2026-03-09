@@ -332,56 +332,72 @@ router.post('/submit', async (req, res) => {
 
     // Check if request has all required fields
     if (!feedbackSetting || !feedback || !llmDetail) {
-        res.status(200).json({
+        res.status(400).json({
             error: errorMessages.missingFields,
         });
         return;
     }
+
+    // Check if all feedback answers are filled
+    const feedbackData = JSON.parse(feedback);
+    if (feedbackData.data && Array.isArray(feedbackData.data)) {
+        const hasEmptyAnswers = feedbackData.data.some((item: any) => !item.answer || item.answer.trim() === '');
+        if (hasEmptyAnswers || !feedbackSetting || !feedback || !llmDetail) {  
+                res.status(400).json({
+                error: errorMessages.missingFields,
+            });
+            return;
+        }
+    }
+
     // Parse feedback
     let generatedTTLObject = {
         entities: '',
         tensions: '',
     }
     let result: string;
+    let llmResult: LLMQueryResult;
     writeToLog(logFilenames.feedback, "Starting Submission Parser", '');
 
     // Entity Extraction
-    result = await queryLLM(llmDetail, entityExtractionPrompt ?? feedbackSystemPrompts[0], `
+    llmResult = await queryLLM(llmDetail, entityExtractionPrompt ?? feedbackSystemPrompts[0], `
         Setting: ${feedbackSetting}
         Existing Entities: ${settingEntities}
         Feedback: ${feedback}
     `, logFilenames.feedback);
 
-    if (result === 'error' || result.length === 0) {
-        res.status(200).json({
-            error: errorMessages.generationFailed,
-        });
+    if (!llmResult.ok || !llmResult.response) {
+        res.status(500).json(buildLlmErrorResponse(errorMessages.generationFailed, llmResult.error || 'error'));
         return;
     }
+    result = llmResult.response;
     generatedTTLObject.entities = result;
 
     // Tension Extraction
-    result = await queryLLM(llmDetail, tensionExtractionPrompt ?? feedbackSystemPrompts[1], `
+    llmResult = await queryLLM(llmDetail, tensionExtractionPrompt ?? feedbackSystemPrompts[1], `
         Setting: ${feedbackSetting}
         Existing Entities: ${settingEntities} and ${generatedTTLObject.entities}
         Feedback: ${feedback}
         Timestamp: ${new Date().toISOString()}
     `, logFilenames.feedback);
 
-    if (result === 'error' || result.length === 0) {
-        res.status(200).json({
-            error: errorMessages.generationFailed,
-        });
+    if (!llmResult.ok || !llmResult.response) {
+        res.status(500).json(buildLlmErrorResponse(errorMessages.generationFailed, llmResult.error || 'error'));
         return;
     }
+    result = llmResult.response;
     generatedTTLObject.tensions = result;
 
     // Validate generated TTL
     const validatorRes = await validateTTLObject(generatedTTLObject, logFilenames.feedback, llmDetail)
     if (!validatorRes) {
-        res.status(200).json({
+        res.status(500).json({
             error: errorMessages.validationFailed,
         });
+        return;
+    }
+    if (hasLLMError(validatorRes)) {
+        res.status(500).json(buildLlmErrorResponse(errorMessages.validationFailed, validatorRes.error || 'error'));
         return;
     }
     writeToLog(logFilenames.feedback, "Generated TTL", removeAtLines(validatorRes.entities) + "\n#####\n" + validatorRes.tensions);
