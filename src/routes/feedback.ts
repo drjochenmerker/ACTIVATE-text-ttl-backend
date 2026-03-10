@@ -192,7 +192,7 @@ router.post('/settingGen', async (req, res) => {
         return;
     }
     if (hasLLMError(validatorRes)) {
-        res.status(500).json(buildLlmErrorResponse(errorMessages.validationFailed, validatorRes.error || 'error'));
+        res.status(500).json(buildLlmErrorResponse(errorMessages.generatorValidationFailed, validatorRes.error || 'error'));
         return;
     }
 
@@ -403,7 +403,7 @@ router.post('/submit', async (req, res) => {
         return;
     }
     if (hasLLMError(validatorRes)) {
-        res.status(500).json(buildLlmErrorResponse(errorMessages.validationFailed, validatorRes.error || 'error'));
+        res.status(500).json(buildLlmErrorResponse(errorMessages.generatorValidationFailed, validatorRes.error || 'error'));
         return;
     }
     writeToLog(logFilenames.feedback, "Generated TTL", removeAtLines(validatorRes.entities) + "\n#####\n" + validatorRes.tensions);
@@ -538,7 +538,7 @@ router.post('/pool', async (req, res) => {
         return;
     }
     if (hasLLMError(validatorRes)) {
-        res.status(500).json(buildLlmErrorResponse(errorMessages.validationFailed, validatorRes.error || 'error'));
+        res.status(500).json(buildLlmErrorResponse(errorMessages.generatorValidationFailed, validatorRes.error || 'error'));
         return;
     }
     writeToLog(logFilenames.feedback, "Generated TTL", validatorRes.entities + "\n#####\n" + validatorRes.tensions);
