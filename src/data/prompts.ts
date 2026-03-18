@@ -9,7 +9,7 @@ export const ttlSyntaxFixPrompt = `
 Given an input in Turtle Syntax with an array of error message, you will fix all of the errors. If they were to result in further errors, 
 you will fix those as well. You will not modify any of the given triples, but only fix the syntax errors.
 Output only the fixed Turtle Syntax, without any additional text or explanations. 
-`
+`;
 
 export const settingGenerationPrompts = [
     `
@@ -79,8 +79,8 @@ export const settingGenerationPrompts = [
         '''
 
         Output only the requested Turtle Syntax, without any additional text or explanations.
-    `
-]
+    `,
+];
 
 export const feedbackSystemPrompts = [
     // Entity Extraction Prompt
@@ -217,7 +217,7 @@ export const feedbackSystemPrompts = [
         :CreationDate "Timestamp" ;
         :IsAI true ;
         :HasIntent :Intent ;
-        :Origin: "Question and Answer of source as rdf:json" .
+        :Origin "Question and Answer of source as rdf:json" .
 
         :CommentID a :Comment ;
         :CommentDescription "Comment"@en ;
@@ -226,14 +226,14 @@ export const feedbackSystemPrompts = [
         # Other language authors
         :CreationDate "Timestamp" ;
         :IsAI true ;
-        :Origin: "Question and Answer of source as rdf:json" .
+        :Origin "Question and Answer of source as rdf:json" .
 
         :ConflictIDorCommentID :HasComment :CommentID .
         '''
 
         Output only the requested format, without any additional text or explanations. 
     `,
-]
+];
 
 export const ttlMergePrompts = [
     `
@@ -264,5 +264,5 @@ export const ttlMergePrompts = [
         Merge as many tensions/comments as possible without combining anything that isn't semantically similar. During this merging process no information must be lost!
         Make sure to generate a graph that is as complete but also as concise as possible.
         Output only the knowledge graph in Turtle Syntax, without any additional text or explanations.
-    `
-]
+    `,
+];
