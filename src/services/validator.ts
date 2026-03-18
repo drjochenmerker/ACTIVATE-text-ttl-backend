@@ -6,7 +6,7 @@
  */
 
 import { Parser, Quad } from 'n3'
-import { requestKgGen, writeToLog } from './utils.js'
+import { queryLLM, writeToLog } from './utils.js'
 import { LLM } from '../data/types.js'
 import { ttlSyntaxFixPrompt } from '../data/prompts.js'
 
@@ -35,7 +35,7 @@ export async function validateTTLObject(obj: Record<string, string>, logFileName
             let validatorResult = await validate(obj[key]);
             writeToLog(logFileName, "Validator Call #" + validateCount, validatorResult)
             if (validatorResult.errors.length > 0) {
-                const fixedTTL = await requestKgGen(llm, ttlSyntaxFixPrompt, obj[key] + '\n' + JSON.stringify(validatorResult.errors), logFileName);
+                const fixedTTL = await queryLLM(llm, ttlSyntaxFixPrompt, obj[key] + '\n' + JSON.stringify(validatorResult.errors), logFileName);
                 if (fixedTTL === 'error' || fixedTTL.length === 0) {
                     return undefined;
                 }

@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unused-vars*/
+
+// IMPORTANT: If changes are done here, apply the same changes to the prompts.ts in the dashboard!
+
 const classExplanation = `
     - "Subject" (Who are the actors in the action? Family physician, Medical specialist, Nurse, Social worker, Carers etc. 
     What perceptions, ideas and emotions are present in the actors? Uncertainty, Discomfort, Incompetence etc.),
@@ -35,7 +39,7 @@ const ttlPrefixes = `
  * System prompt instructing the LLM to fix Turtle Syntax errors.
  */
 export const ttlSyntaxFixPrompt = `
-Given an input in Turtle Syntax with an array of error message, you will fix alle of the errors. If they were to result in further errors, 
+Given an input in Turtle Syntax with an array of error message, you will fix all of the errors. If they were to result in further errors, 
 you will fix those as well. You will not modify any of the given triples, but only fix the syntax errors.
 Output only the fixed Turtle Syntax, without any additional text or explanations. 
 `;
@@ -46,7 +50,11 @@ export const settingGenerationPrompts = [
 
         Refer to the following template that you can expand upon for the output. You must, however, not introduce any new prefixes:
         '''turtle
-        ${ttlPrefixes}
+        @prefix : <http://activate.htwk-leipzig.de/model#> .
+        @prefix owl: <http://www.w3.org/2002/07/owl#> .
+        @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+        @base <http://activate.htwk-leipzig.de/model> .
         
         :UniqueIdentifier a owl:NamedIndividual ;
         :ActivityDescription "summarized description"@en ;
@@ -62,29 +70,28 @@ export const settingGenerationPrompts = [
     `,
     `
         Given a description of a medical simulation, you will extract all entities present and assign them one or multiple of the following classes according to their context in the given situation:
-        ${classExplanation}
+        - "Subject" (Who are the actors in the action? Family physician, Medical specialist, Nurse, Social worker, Carers etc. 
+        What perceptions, ideas and emotions are present in the actors? Uncertainty, Discomfort, Incompetence etc.),
 
-        However, you will always create 20 instances of the “Subject” class. Crucially, these instances must be named exactly as listed below, using the entity type followed by a numerical suffix (01, 02, 03, or 04).
-            - Physician 01
-            - Physician 02
-            - Physician 03
-            - Physician 04
-            - Nurse 01
-            - Nurse 02
-            - Nurse 03
-            - Nurse 04
-            - Occupational Therapist 01
-            - Occupational Therapist 02
-            - Occupational Therapist 03
-            - Occupational Therapist 04
-            - Physiotherapist 01
-            - Physiotherapist 02
-            - Physiotherapist 03
-            - Physiotherapist 04
-            - Pharmacist 01
-            - Pharmacist 02
-            - Pharmacist 03
-            - Pharmacist 04
+        - "Object" (What is the goal of the action? Cure, Care, addressing psychosocial issues etc. On whom or what is this action taken?
+        Patient, Relative, Blood sample etc. What action must be taken? Needs assessment, Reporting, Decisionmaking etc.),
+
+        - "Instrument" (What physical means are used in the action? Patient record, Chart, Medical device, Telephone etc.
+        Which abstract resources are deployed in the action? Conviction, Proactivity, Instruction etc.),
+
+        - "Rule" (Which specific policies and rules are linked to the activity? Guidelines, Authorization, Reimbursements, Co-location etc.
+        What implicit mores and conventions are linked to the activity? Priority, Career track, Professional jargon etc.),
+
+        - "Community" (Where does the activity take place? Home, Nursing home, Hospital etc. What organization do the actors belong to?
+        General University hospital, Independent Municipal health care practice etc. What conditions characterize this setting?
+        Immediate needs, Distance, Shortage etc.)
+
+        - "DivisionOfLabour" (How can different people contribute to the activity? Hierarchy, Role, Leadership, Territorial attitude etc.).
+
+        IMPORTANT: The following base entities will be created automatically and should NOT be included in your output:
+        {{PREDEFINED_ENTITIES}}
+
+        Focus on extracting additional entities relevant to the specific simulation scenario that are not already part of these predefined base entities.
 
         If given a default entity, you will add it as a Subject entity and generate fitting labels. 
         If no default entity is given, generate the entity "Instructor" of the type Subject. 
@@ -92,7 +99,11 @@ export const settingGenerationPrompts = [
         Output the entities you've added in Turtle Syntax and always generate Labels in German, English and Swedish for each entity. The output must be structured as follows:
 
         '''turtle
-        ${ttlPrefixes}
+        @prefix : <http://activate.htwk-leipzig.de/model#> .
+        @prefix owl: <http://www.w3.org/2002/07/owl#> .
+        @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+        @base <http://activate.htwk-leipzig.de/model> .
         
         :UniqueIdentifier a :EntityClass,
         owl:NamedIndividual ;
@@ -139,15 +150,62 @@ export const feedbackSystemPrompts = [
     // Entity Extraction Prompt
     `
         Given a description of a medical simulation, a potentially incomplete list of entities within the simulation and thoughts written down by a participant of the simulation (including their role within), you will extract additional entities mentioned in the notes and assign them one or multiple of the following classes according to their context in the given situation:
-        ${classExplanation}
+        - "Subject" (Who are the actors in the action? Family physician, Medical specialist, Nurse, Social worker, Carers etc. 
+        What perceptions, ideas and emotions are present in the actors? Uncertainty, Discomfort, Incompetence etc.),
+
+        - "Object" (What is the goal of the action? Cure, Care, addressing psychosocial issues etc. On whom or what is this action taken?
+        Patient, Relative, Blood sample etc. What action must be taken? Needs assessment, Reporting, Decisionmaking etc.),
+
+        - "Instrument" (What physical means are used in the action? Patient record, Chart, Medical device, Telephone etc.
+        Which abstract resources are deployed in the action? Conviction, Proactivity, Instruction etc.),
+
+        - "Rule" (Which specific policies and rules are linked to the activity? Guidelines, Authorization, Reimbursements, Co-location etc.
+        What implicit mores and conventions are linked to the activity? Priority, Career track, Professional jargon etc.),
+
+        - "Community" (Where does the activity take place? Home, Nursing home, Hospital etc. What organization do the actors belong to?
+        General University hospital, Independent Municipal health care practice etc. What conditions characterize this setting?
+        Immediate needs, Distance, Shortage etc.)
+
+        - "DivisionOfLabour" (How can different people contribute to the activity? Hierarchy, Role, Leadership, Territorial attitude etc.).
 
         Given entities may also be assigned additional classes. 
 
-        ${inputDescription}
+        The input will be structured as follows:
+        Setting: "Description of the medical simulation"
+        Existing Entities: [
+            {
+                id: entity1ID,
+                classes: [
+                    "Subject"
+                ] 
+            },
+            {
+                id: entity2ID,
+                classes: [
+                    "Object",
+                    "Rule",
+                ]
+            },
+            ...
+        ]
+        Feedback: {
+            "role": "authorEntityID",
+            "data": [
+                    {
+                    "question": "question that the authorEntityID was asked",
+                    "answer": "answer that the authorEntityID gave"
+                    },
+                    ...
+                ]
+        }
         
         Output the entities you've added in Turtle Syntax, generating Labels in German, English and Swedish for each entity. The output must not include any entity from the input and must be structured as follows:
         '''turtle
-        ${ttlPrefixes}
+        @prefix : <http://activate.htwk-leipzig.de/model#> .
+        @prefix owl: <http://www.w3.org/2002/07/owl#> .
+        @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+        @base <http://activate.htwk-leipzig.de/model> .
         
         :UniqueIdentifier a :EntityClass,
         owl:NamedIndividual ;
@@ -171,13 +229,45 @@ export const feedbackSystemPrompts = [
 
         Depending on the content of the extracted tension/feedback/impression, the intent must be derived. You may only use the following three intents: ":Negative", ":Positive" and ":Neutral".
 
-        ${inputDescription}
+        The input will be structured as follows:
+        Setting: "Description of the medical simulation"
+        Existing Entities: [
+            {
+                id: entity1ID,
+                classes: [
+                    "Subject"
+                ] 
+            },
+            {
+                id: entity2ID,
+                classes: [
+                    "Object",
+                    "Rule",
+                ]
+            },
+            ...
+        ]
+        Feedback: {
+            "role": "authorEntityID",
+            "data": [
+                    {
+                    "question": "question that the authorEntityID was asked",
+                    "answer": "answer that the authorEntityID gave"
+                    },
+                    ...
+                ]
+        }
+
         Timestamp: "Timestamp of the feedback (Example: 2024-06-01T12:30:00Z)"
         
         Output the tensions/feedbacks/impressions in the following format, generating titles and descriptions in German, English and Swedish for each tension/feedback/(self)impression:
 
         '''turtle
-        ${ttlPrefixes}
+        @prefix : <http://activate.htwk-leipzig.de/model#> .
+        @prefix owl: <http://www.w3.org/2002/07/owl#> .
+        @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+        @base <http://activate.htwk-leipzig.de/model> .
 
         :ConflictID a :Conflict ;
         :ConflictTitle "Title"@en ;
@@ -191,7 +281,7 @@ export const feedbackSystemPrompts = [
         :CreationDate "Timestamp" ;
         :IsAI true ;
         :HasIntent :Intent ;
-        :Origin: "Question and Answer of source as rdf:json" .
+        :Origin "Question and Answer of source as rdf:json" .
 
         :CommentID a :Comment ;
         :CommentDescription "Comment"@en ;
@@ -200,7 +290,7 @@ export const feedbackSystemPrompts = [
         # Other language authors
         :CreationDate "Timestamp" ;
         :IsAI true ;
-        :Origin: "Question and Answer of source as rdf:json" .
+        :Origin "Question and Answer of source as rdf:json" .
 
         :ConflictIDorCommentID :HasComment :CommentID .
         '''
@@ -258,44 +348,6 @@ export const feedbackSystemPrompts = [
     `,
 ];
 
-// Map Generation for Speaker to Roles based on first utterance
-// export const roleSpeakerMappingTranscriptPrompt = `
-//     Task: Create a JSON object mapping Speaker IDs to their roles based on their introduction sentence.
-
-//     Input Context: You will receive a list where each line contains a "SPEAKER_XX" ID and their single introduction sentence.
-
-//     Instructions:
-//     1. **Role Extraction**: Analyze the German sentence to identify the speaker's role.
-//        - Look for patterns like: "Ich bin [Rolle]", "Ich bin der [Rolle]", "Ich gehöre zu den [Rolle]", "Ich arbeite als [Rolle]".
-//        - **Clean the Noun**: Remove adjectives (e.g., "behandelnder Arzt" -> "Arzt") and convert plurals to singular if necessary (e.g., "Physiotherapeuten" -> "Physiotherapeut").
-//        - Use the original German word. Do not translate.
-
-//     2. **ID Handling (Strict)**:
-//        - You must create a key for **EVERY** Speaker ID provided in the input.
-//        - Do not skip any ID.
-//        - Do not invent any ID.
-//        - Start with "Speaker_00" and continue sequentially (e.g., "Speaker_01", "Speaker_02", etc.). Do not deviate from this format.
-
-//     3. **Value Formatting**:
-//        - Format: "Role01".
-//        - Counter: If a role appears multiple times, increment the number based on the order in the input (e.g., "Arzt01", "Arzt02").
-//        - Fallback: If absolutely no role is mentioned in the sentence, use "Teilnehmer01".
-
-//     Output Requirements:
-//     - Return ONLY valid JSON.
-//     - No markdown blocks (no \`\`\`json), no preamble.
-
-//     Example Input:
-//     SPEAKER_02: Also ich bin Physiotherapeut und finde das schlecht.
-//     SPEAKER_05: Ich bin auf jeden Fall der Arzt hier.
-
-//     Example Output:
-//     {
-//         "SPEAKER_02": "Physiotherapeut01",
-//         "SPEAKER_05": "Arzt01"
-//     }
-// `;
-
 // gpt prompt
 export const roleSpeakerMappingTranscriptPrompt = `
     Task: Create a JSON mapping of speaker IDs to their identified roles.
@@ -322,50 +374,6 @@ export const roleSpeakerMappingTranscriptPrompt = `
     - No markdown.
     - No additional text.
 `;
-// gemini prompt
-// export const roleSpeakerMappingTranscriptPrompt = `
-//     Task: Create a JSON mapping of speaker IDs to their identified roles based on their first appearance in the transcript.
-
-//     Instructions:
-//     1. Scan the transcript chronologically from start to finish.
-//     2. Identify each speaker ID (e.g., SPEAKER_02) the very first time they speak.
-//     3. Determine their role from that first utterance (e.g., "Patient", "Doctor").
-//     4. Mapping Rule: Assign the identified roles to the JSON keys "speaker_00", "speaker_01", etc., strictly in the order they FIRST appear in the text.
-//        - The first person to speak in the transcript ALWAYS becomes "speaker_00".
-//        - The second unique person to speak ALWAYS becomes "speaker_01", and so on.
-//     5. Role Numbering: Append "01" to the role name (e.g., "Doctor01"). If the same role is identified for a different speaker later, use "02".
-
-//     Output Requirements:
-//     - Return ONLY a valid JSON object.
-//     - The order of keys in the JSON must reflect the chronological first appearance of the speakers.
-//     - No preamble, no markdown blocks, and no additional text.
-
-//     Example:
-//     If SPEAKER_02 speaks first and is a Doctor, and SPEAKER_00 speaks second and is a Nurse:
-//     {
-//         "speaker_00": "Doctor01",
-//         "speaker_01": "Nurse01"
-//     }
-// `;
-
-// export const roleSpeakerMappingTranscriptPrompt = `
-//     Task: Create a JSON mapping of speaker IDs to their identified roles.
-
-//     Instructions:
-//     - Identify Roles: For every unique speaker ID in the transcript
-//     - Role Numbering: Append "01" to the role name (e.g., "Doctor01"). If multiple people share a role, increment the number based on their first appearance (e.g., "Nurse01", "Nurse02").
-//     - Key Formatting: The JSON keys must follow the format "speaker_XX" where the speaker IDs must match exactly those in the input.
-
-//     Output Requirements:
-//     - It is important to only return *ONLY* a valid JSON object.
-//     - No preamble, no markdown blocks, and no additional text.
-
-//     Example Output:
-//     {
-//         "speaker_00": "Doctor02",
-//         "speaker_01": "Physiotherapist01"
-//     }
-// `;
 
 export const ttlMergePrompts = [
     // merge prompt for entities
@@ -374,7 +382,8 @@ export const ttlMergePrompts = [
 
         No new prefixes may be used.
         During this merging process no information must be lost!
-        ${ttlOnlyInstruction}
+        Make sure to generate a graph that is as complete but also as concise as possible.
+        Output only the knowledge graph in Turtle Syntax, without any additional text or explanations.
     `,
     // merge prompt for tensions/comments
     `
@@ -395,6 +404,7 @@ export const ttlMergePrompts = [
 
         No new prefixes may be used. 
         Merge as many tensions/comments as possible without combining anything that isn't semantically similar. During this merging process no information must be lost!
+        
         ${ttlOnlyInstruction}
     `,
 
@@ -426,64 +436,3 @@ export const ttlMergePrompts = [
         '''
     `,
 ];
-
-// export const transcriptionMerge = [
-//     `
-//     You are a semantic expert for medical simulation data.
-
-//     **Goal:** Analyze a "Transcribed Audio" (JSON) from a feedback session and generate NEW RDF triples (Turtle Syntax) representing conflicts, tensions, or comments.
-
-//     **Inputs:**
-//     1. **Context (Existing TTL):** The current state of the knowledge graph. Use this to identify existing Agents (e.g., :Physician01, :Instructor) and existing Conflicts.
-//     2. **Transcript:** The diarized audio text.
-
-//     **Instructions:**
-//     - **Map Speakers:** Try to identify who is speaking based on the transcript labels (e.g., "SPEAKER_00") and the roles defined in the "Existing TTL". Use the predicate :WrittenBy to link to the correct entity (e.g., :Nurse01).
-//     - **Create Conflicts:** If a speaker expresses a tension, uncertainty, or critical feedback that is NOT yet in the "Existing TTL", create a new :Conflict.
-//     - **Create Comments:** If a speaker adds to a topic that looks like an existing conflict in the TTL, create a :Comment linked via :HasComment to that conflict.
-//     - **No Duplicates:** Do NOT regenerate triples that are already in the "Existing TTL". Only output NEW information.
-//     - **Format:** Output valid Turtle (TTL) syntax only. Use the same prefixes as the context.
-
-//     **Output Template:**
-//     '''turtle
-//     ${ttlPrefixes}
-
-//     :Conflict_Audio_Gen_1 a :Conflict ;
-//         :ConflictTitle "Unclear medication instructions"@en ;
-//         :ConflictDescription "The nurse felt the instructions were vague."@en ;
-//         :ConflictState "open" ;
-//         :WrittenBy :Nurse01 ;
-//         :HasParticipant :Physician01 ;
-//         :CreationDate "2024-..." ;
-//         :IsAI true ;
-//         :Origin "AudioTranscript" .
-//     '''
-
-//     Output only the requested Turtle Syntax, without any additional text or explanations.
-//     `
-// ];
-
-// replace the constant prompt with a builder function
-// export function buildAudioTranscriptionPrompt(sessionRoles: string[] = [], roleTypesOverride: string[] = roleTypes): string {
-//     return `
-//         Du bist ein Analyse-Assistent für medizinisches Training. Deine Aufgabe ist es, anonyme Sprecher (z.B. "SPEAKER_00", "SPEAKER_01") anhand des Kontexts einem Rollentyp zuzuordnen.
-//         Die Szene ist ein Feedback-Gespräch nach einem Rollenspiel.
-//         Die vollständige Liste der *möglichen* anwesenden Personen (falls relevant) ist: ${sessionRoles.join(', ')}.
-//         Die 4 *Haupt-Rollentypen*, die du zuordnen sollst, sind: ${roleTypesOverride.join(', ')}.
-
-//         Hier sind die Heuristiken zur Identifizierung der 4 Haupt-Rollentypen:
-//         1.  **Lehrperson:** Moderiert, eröffnet/beendet die Runde, stellt Fragen (z.B. "Wie fandest du...", "Was denkst du..."), fasst zusammen. (Bezieht sich oft auf 'Ausbilder' oder 'Instructor' in der Rollenliste).
-//         2.  **Schauspieler:** Spricht aus der Ich-Perspektive des Patienten (z.B. "Ich als Patient", "Ich habe gespürt...", "Ich fühlte mich..."). Spricht oft nur einmal.
-//         3.  **Student (Actor):** Gibt eine Selbst-Einschätzung zur eigenen Leistung (z.B. "Ich war unsicher", "Ich habe versucht...", "Ich fand es schwierig..."). Dies ist die Person, die das Feedback erhält.
-//         4.  **Observer (Student):** Gibt Feedback direkt an den Spieler in der "Du"-Form (z.B. "Du hast gut erklärt", "Du warst...", "Ich fand, du..."). Dies sind oft die meisten anderen Rollen (Arzt 01-04, Pflegekraft 01-04 etc.).
-
-//         Analysiere den folgenden JSON-Input, der den gesamten Text pro Sprecher enthält.
-//         Ordne JEDEM Sprecher einen der 4 Haupt-Rollentypen ("Teacher/Instructor", "Actor", "Student (Actor)", "Observer (Student)") UND einen Konfidenz-Score (high, medium, low) zu.
-
-//         Gib deine Antwort NUR als valides JSON-Array im folgenden Format zurück. Fasse für 'reason' kurz zusammen, warum du dich entschieden hast:
-//         [
-//         { "speaker_id": "SPEAKER_00", "role": "Teacher/Instructor", "confidence": "high", "reason": "Stellt moderierende Fragen." },
-//         { "speaker_id": "SPEAKER_01", "role": "Student (Actor)", "confidence": "medium", "reason": "Gibt Selbst-Einschätzung." }
-//         ]
-//     `;
-// }

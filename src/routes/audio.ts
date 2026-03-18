@@ -7,11 +7,8 @@ import os from "os";
 import path from "path";
 // import { exec } from 'child_process';
 // import crypto from 'crypto';
-// import { callGeminiAPI } from '../services/geminiMapper.js';
-import { requestRoleMapping, writeToLog } from "../services/utils.js";
-// import { queryGemini, requestRoleMapping, writeToLog } from '../services/utils.js';
+import { requestRoleMapping, writeToLog, queryLLM } from "../services/utils.js";
 import { errorMessages, logFilenames } from "../data/staticContent.js";
-import { geminiDetail } from "../data/resources.js";
 import { roleSpeakerMappingTranscriptPrompt } from "../data/prompts.js";
 
 const router = express.Router();
@@ -266,6 +263,7 @@ router.post("/audio/speaker-role-mapping", async (req, res) => {
     // speaker id starts with 00 according to utterance, e.g. speaker_00, speaker_01, etc.
     // this problem leads to llm problems as it cannot recognize the pattern and cannot map roles to speakers correctly
     const transcript = req.body.diarizedTranscript;
+    const llm = req.body.llm;
     if (!transcript) {
         res.status(200).json({
             error: errorMessages.missingFields,
@@ -280,8 +278,9 @@ router.post("/audio/speaker-role-mapping", async (req, res) => {
         "Speaker Role Mapping - Input Transcript",
         transcript
     );
-    geminiRes = await requestRoleMapping(
-        geminiDetail,
+
+    geminiRes = await queryLLM(
+        llm,
         roleSpeakerMappingTranscriptPrompt,
         transcript,
         logFilenames.misc

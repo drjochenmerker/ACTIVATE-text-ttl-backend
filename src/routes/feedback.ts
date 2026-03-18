@@ -1,10 +1,15 @@
 // src/routes/feedback.ts
-import { Router } from 'express';
-import { errorMessages, logFilenames } from '../data/staticContent.js';
-import { removeAtLines, requestKgGen, writeToLog } from '../services/utils.js';
-import { validateTTLObject } from '../services/validator.js';
-import { feedbackSystemPrompts, settingGenerationPrompts, ttlMergePrompts } from '../data/prompts.js';
-import { geminiDetail } from '../data/resources.js';
+import { Router } from "express";
+import { errorMessages, logFilenames } from "../data/staticContent.js";
+import { removeAtLines, queryLLM, writeToLog } from "../services/utils.js";
+import { getPredefinedEntitiesForPrompt } from "../data/requiredEntities.js";
+import { validateTTLObject } from "../services/validator.js";
+import {
+    feedbackSystemPrompts,
+    settingGenerationPrompts,
+    ttlMergePrompts,
+} from "../data/prompts.js";
+import { LLM } from "../data/types.js";
 
 const router = Router();
 
@@ -17,11 +22,11 @@ const router = Router();
  *       Accepts a medical simulation scenario definition and generates corresponding TTL (Turtle) data containing:
  *       1. **Setting Information**: Extracts a fitting name and description for the simulation setting
  *       2. **Entity Extraction**: Identifies all entities present in the simulation and assigns them appropriate classes
- *       
+ *
  *       The system processes the input through two stages:
  *       - **Setting Extraction**: Generates ActivityName and ActivityDescription with multilingual labels
  *       - **Entity Classification**: Assigns entities to activity theory classes (Subject, Object, Instrument, Rule, Community, DivisionOfLabour)
- *       
+ *
  *       Key features:
  *       - Always includes an Instructor entity as a Subject
  *       - Generates labels in German, English, and Swedish
@@ -53,6 +58,12 @@ const router = Router();
  *               defaultRole:
  *                 type: string
  *                 description: The default role for participants in the simulation.
+ *               knowledgeGraphGenerationPrompt:
+ *                  type: string | null
+ *                  description: The special prompt to be used in the generation of the knowledge graph.
+ *               entityAssignmentPrompt:
+ *                  type: string | null
+ *                  description: The special prompt to be used in the assignment of the entities.
  *           example:
  *             title: "Hospice Care Simulation"
  *             description: "A hospice room where a terminally ill patient is cared for by a nurse and visited by family members. The simulation focuses on end-of-life care communication and emotional support."
@@ -84,22 +95,39 @@ const router = Router();
  *                   @prefix : <http://activate.htwk-leipzig.de/model#> .
  *                   @prefix owl: <http://www.w3.org/2002/07/owl#> .
  *                   @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
- *                   
+ *
  *                   :HospiceCareSimulation a owl:NamedIndividual ;
  *                       :ActivityDescription "End-of-life care simulation in hospice setting"@en ;
  *                       :ActivityName "Hospice Care Simulation"@en .
- *                   
+ *
  *                   :Patient1 a :Object, owl:NamedIndividual ;
  *                       rdfs:label "Terminally Ill Patient"@en .
- *                   
+ *
  *                   :Nurse1 a :Subject, owl:NamedIndividual ;
  *                       rdfs:label "Hospice Nurse"@en .
  */
-router.post('/settingGen', async (req, res) => {
-    writeToLog(logFilenames.feedback, "Trying to generate setting: ", JSON.stringify(req.body));
+router.post("/settingGen", async (req, res) => {
+    writeToLog(
+        logFilenames.feedback,
+        "Trying to generate setting: ",
+        JSON.stringify(req.body)
+    );
     const description = req.body.description;
     const title = req.body.title;
     const defaultRole = req.body.defaultRole;
+    const llmDetailReq = req.body.llmDetail;
+    const llmDetail: LLM = JSON.parse(llmDetailReq);
+    const knowledgeGraphGenerationPrompt =
+        req.body.knowledgeGraphGenerationPrompt == ""
+            ? null
+            : req.body.knowledgeGraphGenerationPrompt;
+    const entityAssignmentPrompt =
+        req.body.entityAssignmentPrompt == ""
+            ? null
+            : req.body.entityAssignmentPrompt;
+    const predefinedEntities =
+        req.body.predefinedEntities == "" ? null : req.body.predefinedEntities;
+
     // Check if request has all required fields
     if (!description) {
         res.status(200).json({
@@ -109,18 +137,21 @@ router.post('/settingGen', async (req, res) => {
     }
     // Parse setting
     let generatedTTLObject = {
-        setting: '',
-        entities: '',
-    }
+        setting: "",
+        entities: "",
+    };
     let result: string;
-    writeToLog(logFilenames.feedback, "Starting Setting Generator", '');
-    // Setting Extraction
-    result = await requestKgGen(geminiDetail, settingGenerationPrompts[0],
+    writeToLog(logFilenames.feedback, "Starting Setting Generator", "");
+
+    result = await queryLLM(
+        llmDetail,
+        knowledgeGraphGenerationPrompt ?? settingGenerationPrompts[0],
         `Description: ${description}
         Title: ${title}`,
-        logFilenames.feedback);
+        logFilenames.feedback
+    );
 
-    if (result === 'error' || result.length === 0) {
+    if (result === "error" || result.length === 0) {
         res.status(200).json({
             error: errorMessages.generationFailed,
         });
@@ -128,12 +159,23 @@ router.post('/settingGen', async (req, res) => {
     }
     generatedTTLObject.setting = result;
 
-    // Entity Extraction
-    result = await requestKgGen(geminiDetail, settingGenerationPrompts[1],
+    // Get predefined entities for prompt context
+    const predefinedEntitiesForPrompt = getPredefinedEntitiesForPrompt(
+        predefinedEntities ?? undefined
+    );
+    const entityPrompt = (
+        entityAssignmentPrompt ?? settingGenerationPrompts[1]
+    ).replace("{{PREDEFINED_ENTITIES}}", predefinedEntitiesForPrompt);
+
+    result = await queryLLM(
+        llmDetail,
+        entityPrompt,
         `Description: ${description}
         Default Entity: ${defaultRole}`,
-        logFilenames.feedback);
-    if (result === 'error' || result.length === 0) {
+        logFilenames.feedback
+    );
+
+    if (result === "error" || result.length === 0) {
         res.status(200).json({
             error: errorMessages.generationFailed,
         });
@@ -142,7 +184,11 @@ router.post('/settingGen', async (req, res) => {
     generatedTTLObject.entities = result;
 
     // Validate generated TTL
-    const validatorRes = await validateTTLObject(generatedTTLObject, logFilenames.feedback, geminiDetail)
+    const validatorRes = await validateTTLObject(
+        generatedTTLObject,
+        logFilenames.feedback,
+        llmDetail
+    );
     if (!validatorRes) {
         res.status(200).json({
             error: errorMessages.validationFailed,
@@ -150,9 +196,14 @@ router.post('/settingGen', async (req, res) => {
         return;
     }
     // Merge and return
-    writeToLog(logFilenames.feedback, "Generated TTL", validatorRes.setting + "\n" + removeAtLines(validatorRes.entities));
+    writeToLog(
+        logFilenames.feedback,
+        "Generated TTL",
+        validatorRes.setting + "\n" + removeAtLines(validatorRes.entities)
+    );
     res.json({
-        status: 'done', ttl: validatorRes.setting + "\n" + removeAtLines(validatorRes.entities)
+        status: "done",
+        ttl: validatorRes.setting + "\n" + removeAtLines(validatorRes.entities),
     });
 });
 
@@ -165,12 +216,12 @@ router.post('/settingGen', async (req, res) => {
  *       Accepts structured feedback from a medical simulation participant and generates corresponding TTL (Turtle) data for:
  *       1. Additional entities mentioned in the feedback
  *       2. Tensions, feedbacks, and (self)impressions as conflicts with comments
- *       
+ *
  *       The system processes feedback containing role, case information, and structured question-answer pairs to extract:
  *       - New entities and assign them appropriate classes
  *       - Conflicts/tensions with participants from valid class combinations
  *       - Comments and responses to conflicts
- *       
+ *
  *       Validates the generated TTL before returning.
  *     tags: [Feedback]
  *     requestBody:
@@ -273,13 +324,28 @@ router.post('/settingGen', async (req, res) => {
  *                   type: string
  *                   description: Error message if generation or validation failed.
  */
-router.post('/submit', async (req, res) => {
-    writeToLog(logFilenames.feedback, "Trying to parse feedback: ", JSON.stringify(req.body));
+router.post("/submit", async (req, res) => {
+    writeToLog(
+        logFilenames.feedback,
+        "Trying to parse feedback: ",
+        JSON.stringify(req.body)
+    );
     const feedbackSetting = req.body.setting;
     const settingEntities = JSON.stringify(req.body.entities) || [];
     const feedback = JSON.stringify(req.body.feedback);
+    const llmDetailReq = req.body.llmDetail;
+    const llmDetail: LLM = JSON.parse(llmDetailReq);
+    const entityExtractionPrompt =
+        req.body.entityExtractionPrompt == ""
+            ? null
+            : req.body.entityExtractionPrompt;
+    const tensionExtractionPrompt =
+        req.body.tensionExtractionPrompt == ""
+            ? null
+            : req.body.tensionExtractionPrompt;
+
     // Check if request has all required fields
-    if (!feedbackSetting || !feedback || !geminiDetail) {
+    if (!feedbackSetting || !feedback || !llmDetail) {
         res.status(200).json({
             error: errorMessages.missingFields,
         });
@@ -287,19 +353,25 @@ router.post('/submit', async (req, res) => {
     }
     // Parse feedback
     let generatedTTLObject = {
-        entities: '',
-        tensions: '',
-    }
+        entities: "",
+        tensions: "",
+    };
     let result: string;
-    writeToLog(logFilenames.feedback, "Starting Submission Parser", '');
+    writeToLog(logFilenames.feedback, "Starting Submission Parser", "");
 
     // Entity Extraction
-    result = await requestKgGen(geminiDetail, feedbackSystemPrompts[0], `
-            Setting: ${feedbackSetting}
-            Existing Entities: ${settingEntities}
-            Feedback: ${feedback}
-        `, logFilenames.feedback);
-    if (result === 'error' || result.length === 0) {
+    result = await queryLLM(
+        llmDetail,
+        entityExtractionPrompt ?? feedbackSystemPrompts[0],
+        `
+        Setting: ${feedbackSetting}
+        Existing Entities: ${settingEntities}
+        Feedback: ${feedback}
+    `,
+        logFilenames.feedback
+    );
+
+    if (result === "error" || result.length === 0) {
         res.status(200).json({
             error: errorMessages.generationFailed,
         });
@@ -308,13 +380,19 @@ router.post('/submit', async (req, res) => {
     generatedTTLObject.entities = result;
 
     // Tension Extraction
-    result = await requestKgGen(geminiDetail, feedbackSystemPrompts[1], `
-            Setting: ${feedbackSetting}
-            Existing Entities: ${settingEntities} and ${generatedTTLObject.entities}
-            Feedback: ${feedback}
-            Timestamp: ${new Date().toISOString()}
-        `, logFilenames.feedback);
-    if (result === 'error' || result.length === 0) {
+    result = await queryLLM(
+        llmDetail,
+        tensionExtractionPrompt ?? feedbackSystemPrompts[1],
+        `
+        Setting: ${feedbackSetting}
+        Existing Entities: ${settingEntities} and ${generatedTTLObject.entities}
+        Feedback: ${feedback}
+        Timestamp: ${new Date().toISOString()}
+    `,
+        logFilenames.feedback
+    );
+
+    if (result === "error" || result.length === 0) {
         res.status(200).json({
             error: errorMessages.generationFailed,
         });
@@ -323,26 +401,42 @@ router.post('/submit', async (req, res) => {
     generatedTTLObject.tensions = result;
 
     // Validate generated TTL
-    const validatorRes = await validateTTLObject(generatedTTLObject, logFilenames.feedback, geminiDetail)
+    const validatorRes = await validateTTLObject(
+        generatedTTLObject,
+        logFilenames.feedback,
+        llmDetail
+    );
     if (!validatorRes) {
         res.status(200).json({
             error: errorMessages.validationFailed,
         });
         return;
     }
-    writeToLog(logFilenames.feedback, "Generated TTL", removeAtLines(validatorRes.entities) + "\n#####\n" + validatorRes.tensions);
+    writeToLog(
+        logFilenames.feedback,
+        "Generated TTL",
+        removeAtLines(validatorRes.entities) +
+            "\n#####\n" +
+            validatorRes.tensions
+    );
     res.json({
-        status: 'done', ttl: validatorRes
+        status: "done",
+        ttl: validatorRes,
     });
 });
 
-router.post('/submitTranscript', async (req, res) => {
-    writeToLog(logFilenames.feedback, "Trying to parse transcription feedback: ", JSON.stringify(req.body));
+router.post("/submitTranscript", async (req, res) => {
+    writeToLog(
+        logFilenames.feedback,
+        "Trying to parse transcription feedback: ",
+        JSON.stringify(req.body)
+    );
     const feedbackSetting = req.body.setting;
     const settingEntities = JSON.stringify(req.body.entities) || [];
     const feedback = JSON.stringify(req.body.feedback);
+    const llm = req.body.llm;
     // Check if request has all required fields
-    if (!feedbackSetting || !feedback || !geminiDetail) {
+    if (!feedbackSetting || !feedback || !llm) {
         res.status(200).json({
             error: errorMessages.missingFields,
         });
@@ -350,19 +444,28 @@ router.post('/submitTranscript', async (req, res) => {
     }
     // Parse feedback
     let generatedTTLObject = {
-        entities: '',
-        tensions: '',
-    }
+        entities: "",
+        tensions: "",
+    };
     let result: string;
-    writeToLog(logFilenames.feedback, "Starting Transcription Submission Parser", '');
+    writeToLog(
+        logFilenames.feedback,
+        "Starting Transcription Submission Parser",
+        ""
+    );
 
     // Entity Extraction
-    result = await requestKgGen(geminiDetail, feedbackSystemPrompts[0], `
+    result = await queryLLM(
+        llm,
+        feedbackSystemPrompts[0],
+        `
             Setting: ${feedbackSetting}
             Existing Entities: ${settingEntities}
             Feedback: ${feedback}
-        `, logFilenames.feedback);
-    if (result === 'error' || result.length === 0) {
+        `,
+        logFilenames.feedback
+    );
+    if (result === "error" || result.length === 0) {
         res.status(200).json({
             error: errorMessages.generationFailed,
         });
@@ -371,13 +474,18 @@ router.post('/submitTranscript', async (req, res) => {
     generatedTTLObject.entities = result;
 
     // Tension Extraction
-    result = await requestKgGen(geminiDetail, feedbackSystemPrompts[2], `
+    result = await queryLLM(
+        llm,
+        feedbackSystemPrompts[2],
+        `
             Setting: ${feedbackSetting}
             Existing Entities: ${settingEntities} and ${generatedTTLObject.entities}
             Feedback: ${feedback}
             Timestamp: ${new Date().toISOString()}
-        `, logFilenames.feedback);
-    if (result === 'error' || result.length === 0) {
+        `,
+        logFilenames.feedback
+    );
+    if (result === "error" || result.length === 0) {
         res.status(200).json({
             error: errorMessages.generationFailed,
         });
@@ -386,16 +494,27 @@ router.post('/submitTranscript', async (req, res) => {
     generatedTTLObject.tensions = result;
 
     // Validate generated TTL
-    const validatorRes = await validateTTLObject(generatedTTLObject, logFilenames.feedback, geminiDetail)
+    const validatorRes = await validateTTLObject(
+        generatedTTLObject,
+        logFilenames.feedback,
+        llm
+    );
     if (!validatorRes) {
         res.status(200).json({
             error: errorMessages.validationFailed,
         });
         return;
     }
-    writeToLog(logFilenames.feedback, "Generated TTL", removeAtLines(validatorRes.entities) + "\n#####\n" + validatorRes.tensions);
+    writeToLog(
+        logFilenames.feedback,
+        "Generated TTL",
+        removeAtLines(validatorRes.entities) +
+            "\n#####\n" +
+            validatorRes.tensions
+    );
     res.json({
-        status: 'done', ttl: validatorRes
+        status: "done",
+        ttl: validatorRes,
     });
 });
 
@@ -405,17 +524,17 @@ router.post('/submitTranscript', async (req, res) => {
  *   post:
  *     summary: Merge multiple TTL entities and tensions/conflicts into consolidated output
  *     description: |
- *       Accepts multiple TTL (Turtle) inputs containing entities and tensions/conflicts from different sources 
+ *       Accepts multiple TTL (Turtle) inputs containing entities and tensions/conflicts from different sources
  *       and semantically merges them into a single, consolidated TTL output. This endpoint is used to combine
  *       results from multiple feedback submissions into a unified knowledge graph.
- *       
+ *
  *       The merging process:
  *       - **Entities**: Combines multiple entity TTL inputs by merging triples semantically, avoiding duplicates
  *       - **Tensions/Conflicts**: Merges conflicts intelligently by:
  *         - Combining semantically identical feedback from different authors
  *         - Converting responses to existing conflicts into comments with HasComment relations
  *         - Merging participants and descriptions when appropriate
- *       
+ *
  *       The system ensures no duplicate triples and maintains semantic consistency across the merged output.
  *     tags: [Feedback]
  *     requestBody:
@@ -466,12 +585,27 @@ router.post('/submitTranscript', async (req, res) => {
  *                   description: Error message if merging or validation failed.
  */
 
-router.post('/pool', async (req, res) => {
-    writeToLog(logFilenames.feedback, "Trying to pool results: ", JSON.stringify(req.body));
+router.post("/pool", async (req, res) => {
+    writeToLog(
+        logFilenames.feedback,
+        "Trying to pool results: ",
+        JSON.stringify(req.body)
+    );
     const entityPool = req.body.entities;
     const tensionPool = req.body.tensions;
+    const llmDetailReq = req.body.llmDetail;
+    const llmDetail: LLM = JSON.parse(llmDetailReq);
+    const turtleFileMergePrompt =
+        req.body.turtleFileMergePrompt == ""
+            ? null
+            : req.body.turtleFileMergePrompt;
+    const tensionExtractionPrompt =
+        req.body.tensionExtractionPrompt == ""
+            ? null
+            : req.body.tensionExtractionPrompt;
+
     // Check if request has all required fields
-    if (!entityPool || !tensionPool || !geminiDetail) {
+    if (!entityPool || !tensionPool || !llmDetail) {
         res.status(200).json({
             error: errorMessages.missingFields,
         });
@@ -480,15 +614,21 @@ router.post('/pool', async (req, res) => {
 
     // Parse feedback
     let generatedTTLObject = {
-        entities: '',
-        tensions: '',
-    }
+        entities: "",
+        tensions: "",
+    };
     let result: string;
-    writeToLog(logFilenames.feedback, "Starting semantic merging process", '');
+    writeToLog(logFilenames.feedback, "Starting semantic merging process", "");
 
     // Entity Merge
-    result = await requestKgGen(geminiDetail, ttlMergePrompts[0], entityPool, logFilenames.feedback);
-    if (result === 'error' || result.length === 0) {
+    result = await queryLLM(
+        llmDetail,
+        turtleFileMergePrompt ?? ttlMergePrompts[0],
+        entityPool,
+        logFilenames.feedback
+    );
+
+    if (result === "error" || result.length === 0) {
         res.status(200).json({
             error: errorMessages.generationFailed,
         });
@@ -497,12 +637,15 @@ router.post('/pool', async (req, res) => {
     generatedTTLObject.entities = result;
 
     // Tension Merge
-    result = await requestKgGen(geminiDetail,
-        feedbackSystemPrompts[1],
+    result = await queryLLM(
+        llmDetail,
+        tensionExtractionPrompt ?? feedbackSystemPrompts[1],
         `Tensions: ${tensionPool}
         Entities: ${generatedTTLObject.entities}`,
-        logFilenames.feedback);
-    if (result === 'error' || result.length === 0) {
+        logFilenames.feedback
+    );
+
+    if (result === "error" || result.length === 0) {
         res.status(200).json({
             error: errorMessages.generationFailed,
         });
@@ -511,76 +654,92 @@ router.post('/pool', async (req, res) => {
     generatedTTLObject.tensions = result;
 
     // Validate generated TTL
-    const validatorRes = await validateTTLObject(generatedTTLObject, logFilenames.feedback, geminiDetail)
+    const validatorRes = await validateTTLObject(
+        generatedTTLObject,
+        logFilenames.feedback,
+        llmDetail
+    );
     if (!validatorRes) {
         res.status(200).json({
             error: errorMessages.validationFailed,
         });
         return;
     }
-    writeToLog(logFilenames.feedback, "Generated TTL", validatorRes.entities + "\n#####\n" + validatorRes.tensions);
+    writeToLog(
+        logFilenames.feedback,
+        "Generated TTL",
+        validatorRes.entities + "\n#####\n" + validatorRes.tensions
+    );
     res.json({
-        status: 'done', ttl: validatorRes.entities + removeAtLines(validatorRes.tensions)
+        status: "done",
+        ttl: validatorRes.entities + removeAtLines(validatorRes.tensions),
     });
 });
 
 // src/routes/feedback.ts
 
-router.post('/transcriptionPool', async (req, res) => {
-    writeToLog(logFilenames.feedback, "Trying to pool transcription results: ", JSON.stringify(req.body));
+// router.post("/transcriptionPool", async (req, res) => {
+//     writeToLog(
+//         logFilenames.feedback,
+//         "Trying to pool transcription results: ",
+//         JSON.stringify(req.body)
+//     );
 
-    const transcriptionPool = req.body.diarizedTranscript; 
-    const existingTTL = req.body.existingTTL || ""; // Der Kontext vom Frontend
-    
-    if (!transcriptionPool || transcriptionPool.length === 0) { 
-        res.status(200).json({
-            error: errorMessages.missingFields,
-        });
-        return;
-    }
+//     const transcriptionPool = req.body.diarizedTranscript;
+//     const existingTTL = req.body.existingTTL || ""; // Der Kontext vom Frontend
 
-    try {
-        let result: string;
-        writeToLog(logFilenames.feedback, "Starting transcription merging process", '');
-        
-        // Construct the prompt input
-        const promptInput = `
-        EXISTING KNOWLEDGE GRAPH (TTL Context):
-        ${existingTTL}
+//     if (!transcriptionPool || transcriptionPool.length === 0) {
+//         res.status(200).json({
+//             error: errorMessages.missingFields,
+//         });
+//         return;
+//     }
 
-        NEW TRANSCRIPT (JSON):
-        ${JSON.stringify(transcriptionPool, null, 2)}
-        `;
+//     try {
+//         let result: string;
+//         writeToLog(
+//             logFilenames.feedback,
+//             "Starting transcription merging process",
+//             ""
+//         );
 
-        // Request KG generation
-        result = await requestKgGen(
-            geminiDetail, 
-            ttlMergePrompts[2], // Uses the new prompt from step 1
-            promptInput, 
-            logFilenames.feedback
-        );
+//         // Construct the prompt input
+//         const promptInput = `
+//         EXISTING KNOWLEDGE GRAPH (TTL Context):
+//         ${existingTTL}
 
-        if (result === 'error' || result.length === 0) {
-            res.status(200).json({
-                error: errorMessages.generationFailed,
-            });
-            return;
-        }
+//         NEW TRANSCRIPT (JSON):
+//         ${JSON.stringify(transcriptionPool, null, 2)}
+//         `;
 
-        // Optional: Validate output (Empfohlen)
-        // Wir nutzen hier eine vereinfachte Validierung oder geben das Ergebnis direkt zurück,
-        // da wir davon ausgehen, dass requestKgGen bereits Parsing/Cleanup macht (parseLLMOutput).
-        
-        res.json({
-            status: 'done',
-            ttl: removeAtLines(result) // Clean up @prefix lines to avoid duplication in main.py parse
-        });
+//         // Request KG generation
+//         result = await queryLLM(
+//             llm,
+//             ttlMergePrompts[2], // Uses the new prompt from step 1
+//             promptInput,
+//             logFilenames.feedback
+//         );
 
-    } catch (error) {
-        console.error("Error during transcription pooling:", error);
-        res.status(500).json({ error: "Internal processing error" });
-    }
-});
+//         if (result === "error" || result.length === 0) {
+//             res.status(200).json({
+//                 error: errorMessages.generationFailed,
+//             });
+//             return;
+//         }
+
+//         // Optional: Validate output (Empfohlen)
+//         // Wir nutzen hier eine vereinfachte Validierung oder geben das Ergebnis direkt zurück,
+//         // da wir davon ausgehen, dass requestKgGen bereits Parsing/Cleanup macht (parseLLMOutput).
+
+//         res.json({
+//             status: "done",
+//             ttl: removeAtLines(result), // Clean up @prefix lines to avoid duplication in main.py parse
+//         });
+//     } catch (error) {
+//         console.error("Error during transcription pooling:", error);
+//         res.status(500).json({ error: "Internal processing error" });
+//     }
+// });
 // router.post('/transcriptionPool', async (req, res) => {
 //     writeToLog(logFilenames.feedback, "Trying to pool transcription results with existing conflicts: ", JSON.stringify(req.body));
 
@@ -593,10 +752,10 @@ router.post('/transcriptionPool', async (req, res) => {
 //     }
 
 //     try {
-//         let result: string; // result of the pooling request 
+//         let result: string; // result of the pooling request
 //         writeToLog(logFilenames.feedback, "Starting semantic merging process", '');
 //         // console.log("DEBUG: transcriptionpool: ", transcriptionPool) // everything that was transcribed
-        
+
 //         // Request KG generation for merging transcription with existing conflicts
 //         result = await requestKgGen(geminiDetail, transcriptionMerge[0], transcriptionPool, logFilenames.feedback);
 //         res.json({
