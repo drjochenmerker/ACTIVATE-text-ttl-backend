@@ -7,7 +7,7 @@ import os from "os";
 import path from "path";
 // import { exec } from 'child_process';
 // import crypto from 'crypto';
-import { requestRoleMapping, writeToLog, queryLLM } from "../services/utils.js";
+import { writeToLog, queryLLM } from "../services/utils.js";
 import { errorMessages, logFilenames } from "../data/staticContent.js";
 import { roleSpeakerMappingTranscriptPrompt } from "../data/prompts.js";
 
