@@ -362,6 +362,14 @@ export const vocab = `
               rdfs:range xsd:string .
 
 
+###  http://activate.htwk-leipzig.de/model#ActivityArchived
+:ActivityArchived rdf:type owl:DatatypeProperty ;
+                  rdfs:domain owl:Thing ;
+                  rdfs:range xsd:boolean ;
+                  rdfs:comment "Whether an activity is archived."@en ;
+                  rdfs:label "Activity Archived"@en .
+
+
 ###  http://activate.htwk-leipzig.de/model#CommentDescription
 :CommentDescription rdf:type owl:DatatypeProperty ;
                     rdfs:domain :Comment ;
