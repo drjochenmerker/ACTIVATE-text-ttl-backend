@@ -319,11 +319,21 @@ async function queryCortecs(model: LLM, systemPrompt: string, userPrompt: string
         }
     );
     try {
+        let combinedPrompt: string = "";
+
+        // Cortecs only accepts strings, therefore userPrompt has to be converted if it is an array
+        if (!Array.isArray(userPrompt)) {
+            combinedPrompt = userPrompt;
+        } else {
+            for (let x = 0; x < userPrompt.length; x++) {
+                combinedPrompt += userPrompt[x];
+            }
+        }
         const completion = await cortecs.chat.completions.create({
             model: model.modelName,
             messages: [
                 { role: "system", content: systemPrompt },
-                { role: "user", content: userPrompt }
+                { role: "user", content: combinedPrompt }
             ],
             temperature: model.temperature,
         });
