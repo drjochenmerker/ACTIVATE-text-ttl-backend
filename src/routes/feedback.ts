@@ -424,6 +424,39 @@ router.post("/submit", async (req, res) => {
         ttl: validatorRes,
     });
 });
+// router.post("/submitTranscriptCortecs", async (req, res) => {
+//     writeToLog(
+//         logFilenames.feedback,
+//         "Trying generate transcript.: ",
+//         "Payload received (Audio data hidden)" // Logs sauber halten
+//     );
+
+//     const audio = req.body.audio;
+//     const llm = req.body.llm;
+
+//     if (!audio || !llm) {
+//         res.status(400).json({
+//             error: errorMessages.missingFields,
+//         });
+//         return;
+//     }
+
+//     const result = await transcribeAudio(llm, audio);
+
+//     if (result === "error" || result.length === 0) {
+//         res.status(500).json({
+//             error: errorMessages.generationFailed,
+//         });
+//         return;
+//     }
+
+//     writeToLog(logFilenames.feedback, "Generated Transcript", result);
+
+//     res.json({
+//         status: "done",
+//         res: result, //should be transcript
+//     });
+// });
 
 router.post("/submitTranscript", async (req, res) => {
     writeToLog(
@@ -438,6 +471,7 @@ router.post("/submitTranscript", async (req, res) => {
     // Check if request has all required fields
     if (!feedbackSetting || !feedback || !llm) {
         res.status(200).json({
+            // check for error number 500
             error: errorMessages.missingFields,
         });
         return;

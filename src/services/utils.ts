@@ -203,7 +203,7 @@ export async function requestRoleMapping(
 export async function queryLLM(
     llm: LLM,
     systemPrompt: string,
-    activityText: string,
+    activityText: string | string[],
     logFilename: string = logFilenames.misc
 ): Promise<string> {
     let llmOutput: string = "";
@@ -212,7 +212,7 @@ export async function queryLLM(
             llmOutput = await queryGemini(
                 llm,
                 systemPrompt,
-                activityText,
+                <string>activityText,
                 logFilename
             );
             break;
@@ -220,7 +220,7 @@ export async function queryLLM(
             llmOutput = await queryCortecs(
                 llm,
                 systemPrompt,
-                activityText,
+                <string>activityText,
                 logFilename
             );
             break;
@@ -228,7 +228,7 @@ export async function queryLLM(
             llmOutput = await queryChatGPT(
                 llm,
                 systemPrompt,
-                activityText,
+                <string[]>activityText,
                 logFilename
             );
             break;
@@ -236,7 +236,7 @@ export async function queryLLM(
             llmOutput = await queryClaude(
                 llm,
                 systemPrompt,
-                activityText,
+                <string>activityText,
                 logFilename
             );
             break;
@@ -340,15 +340,25 @@ import OpenAI from "openai";
 async function queryChatGPT(
     model: LLM,
     systemPrompt: string,
-    userPrompt: string,
+    userPrompt: string | string[],
     logFilename: string = logFilenames.misc
 ): Promise<string> {
     const chatgpt = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
     try {
+        let combinedPrompt: string = "";
+
+        // ChatGPT only accepts strings, therefore userPrompt has to be converted if it is an array
+        if (!Array.isArray(userPrompt)) {
+            combinedPrompt = userPrompt;
+        } else {
+            for (let x = 0; x < userPrompt.length; x++) {
+                combinedPrompt += userPrompt[x];
+            }
+        }
         const message = await chatgpt.responses.create({
             model: model.modelName,
-            input: userPrompt,
+            input: combinedPrompt,
             instructions: systemPrompt,
         });
 
