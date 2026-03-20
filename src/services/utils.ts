@@ -177,21 +177,21 @@ export function clearLog(filename: string): void {
  * @param logFilename - (Optional) The filename to use for logging the request and response. Defaults to a miscellaneous log file.
  * @returns A promise that resolves to the response from the LLM.
  */
-export async function queryLLM(llm: LLM, systemPrompt: string, activityText: string, logFilename: string = logFilenames.misc): Promise<string> {
+export async function queryLLM(llm: LLM, systemPrompt: string, activityText: string | string[], logFilename: string = logFilenames.misc): Promise<string> {
 
     let llmOutput: string = "";
     switch (llm.selectedProvider) {
         case 'gemini':
-            llmOutput = await queryGemini(llm, systemPrompt, activityText, logFilename);
+            llmOutput = await queryGemini(llm, systemPrompt, <string>activityText, logFilename);
             break;
         case 'cortecs':
-            llmOutput = await queryCortecs(llm, systemPrompt, activityText, logFilename);
+            llmOutput = await queryCortecs(llm, systemPrompt, <string>activityText, logFilename);
             break;
         case 'chatgpt':
-            llmOutput = await queryChatGPT(llm, systemPrompt, activityText, logFilename);
+            llmOutput = await queryChatGPT(llm, systemPrompt, <string[]>activityText, logFilename);
             break;
         case 'claude':
-            llmOutput = await queryClaude(llm, systemPrompt, activityText, logFilename);
+            llmOutput = await queryClaude(llm, systemPrompt, <string>activityText, logFilename);
             break;
         default:
             break;
@@ -280,16 +280,26 @@ import OpenAI from 'openai';
 /**
  * Generic function to query ChatGPT safely with retries and timeout handling.
  */
-async function queryChatGPT(model: LLM, systemPrompt: string, userPrompt: string, logFilename: string = logFilenames.misc): Promise<string> {
+async function queryChatGPT(model: LLM, systemPrompt: string, userPrompt: string | string[], logFilename: string = logFilenames.misc): Promise<string> {
 
     const chatgpt = new OpenAI(
         { apiKey: process.env.OPENAI_API_KEY }
     );
 
     try {
+        let combinedPrompt: string = "";
+
+        // ChatGPT only accepts strings, therefore userPrompt has to be converted if it is an array
+        if (!Array.isArray(userPrompt)) {
+            combinedPrompt = userPrompt;
+        } else {
+            for (let x = 0; x < userPrompt.length; x++) {
+                combinedPrompt += userPrompt[x];
+            }
+        }
         const message = await chatgpt.responses.create({
             model: model.modelName,
-            input: userPrompt,
+            input: combinedPrompt,
             instructions: systemPrompt,
         });
 
