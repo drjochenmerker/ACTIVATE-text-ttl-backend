@@ -6,7 +6,7 @@
  */
 
 import { Parser, Quad } from 'n3'
-import { queryLLM, writeToLog } from './utils.js'
+import { LLMQueryResult, queryLLM, writeToLog } from './utils.js'
 import { LLM } from '../data/types.js'
 import { ttlSyntaxFixPrompt } from '../data/prompts.js'
 
@@ -23,7 +23,7 @@ const regexp: Record<string, RegExp> = {
     int: /^[-+]?(0|[1-9]\d*)$/,
 }
 
-export async function validateTTLObject(obj: Record<string, string>, logFileName: string, llm: LLM): Promise<Record<string, string> | undefined> {
+export async function validateTTLObject(obj: Record<string, string>, logFileName: string, llm: LLM): Promise<Record<string, string> | LLMQueryResult | undefined> {
     let validateCount = 0;
     let validated = false;
     for (const key of Object.keys(obj) as (keyof typeof obj)[]) {
@@ -35,11 +35,11 @@ export async function validateTTLObject(obj: Record<string, string>, logFileName
             let validatorResult = await validate(obj[key]);
             writeToLog(logFileName, "Validator Call #" + validateCount, validatorResult)
             if (validatorResult.errors.length > 0) {
-                const fixedTTL = await queryLLM(llm, ttlSyntaxFixPrompt, obj[key] + '\n' + JSON.stringify(validatorResult.errors), logFileName);
-                if (fixedTTL === 'error' || fixedTTL.length === 0) {
-                    return undefined;
+                const fixedTTLResult = await queryLLM(llm, ttlSyntaxFixPrompt, obj[key] + '\n' + JSON.stringify(validatorResult.errors), logFileName);
+                if (!fixedTTLResult.ok || !fixedTTLResult.response) {
+                    return fixedTTLResult;
                 }
-                obj[key] = fixedTTL;
+                obj[key] = fixedTTLResult.response;
             } else {
                 validated = true;
             }
