@@ -6,6 +6,7 @@ import { getPredefinedEntitiesForPrompt } from '../data/requiredEntities.js';
 import { validateTTLObject } from '../services/validator.js';
 import { feedbackSystemPrompts, settingGenerationPrompts, ttlMergePrompts } from '../data/prompts.js';
 import { LLM } from '../data/types.js';
+import { requireInstructor } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -102,7 +103,7 @@ const router = Router();
  *                   :Nurse1 a :Subject, owl:NamedIndividual ;
  *                       rdfs:label "Hospice Nurse"@en .
  */
-router.post('/settingGen', async (req, res) => {
+router.post('/settingGen', requireInstructor, async (req, res) => {
     writeToLog(logFilenames.feedback, "Trying to generate setting: ", JSON.stringify(req.body));
     const description = req.body.description;
     const title = req.body.title;
@@ -428,7 +429,7 @@ router.post('/submit', async (req, res) => {
  *                   description: Error message if merging or validation failed.
  */
 
-router.post('/pool', async (req, res) => {
+router.post('/pool', requireInstructor, async (req, res) => {
     writeToLog(logFilenames.feedback, "Trying to pool results: ", JSON.stringify(req.body));
     const entityPool = req.body.entities;
     const tensionPool = req.body.tensions;
