@@ -14,7 +14,7 @@ const server = createServer(app);
 server.setTimeout(300000); // TODO: set to 5 minutes
 const port = process.env.BACKEND_PORT || 8500;
 
-dotenv.config({ path: '../.env' });
+dotenv.config({ path: '.env' });
 
 // Swagger Setup
 const swaggerSpec = swaggerJsdoc({

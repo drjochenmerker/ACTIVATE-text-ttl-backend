@@ -292,7 +292,7 @@ router.post('/settingGen', requireInstructor, async (req, res) => {
  *                   type: string
  *                   description: Error message if generation or validation failed.
  */
-router.post('/submit', async (req, res) => {
+router.post('/submit', requireInstructor, async (req, res) => {
     writeToLog(logFilenames.feedback, "Trying to parse feedback: ", JSON.stringify(req.body));
     const feedbackSetting = req.body.setting;
     const settingEntities = JSON.stringify(req.body.entities) || [];
