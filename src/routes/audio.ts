@@ -242,7 +242,8 @@ async function callPythonBackend(
 
     const pythonResponse = await axios.post(pythonApiUrl, formData, {
         headers: formData.getHeaders(),
-        timeout: 30 * 60 * 1000, // 30 minutes timeout
+        // timeout: 30 * 60 * 1000, // 30 minutes timeout
+        timeout: 180 * 60 * 1000, // 3 hours timeout, for very long files
     });
 
     if (pythonResponse.data.status !== "success") {
