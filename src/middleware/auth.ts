@@ -1,14 +1,20 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
+import jwt, { JwtPayload, VerifyErrors } from 'jsonwebtoken';
 import { writeToLog } from '../services/utils.js';
 import { logFilenames } from '../data/staticContent.js';
 
+type AuthenticatedUser = JwtPayload & {
+    role: string;
+    timestamp: number;
+};
+
 export interface AuthenticatedRequest extends Request {
-    user?: {
-        role: string;
-        timestamp: number;
-    };
+    user?: AuthenticatedUser;
 }
+
+const isAuthenticatedUser = (user: string | JwtPayload): user is AuthenticatedUser => {
+    return typeof user !== 'string' && typeof user.role === 'string' && typeof user.timestamp === 'number';
+};
 
 export const authenticateToken = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     const authHeader = req.headers['authorization'];
@@ -25,9 +31,9 @@ export const authenticateToken = (req: AuthenticatedRequest, res: Response, next
 
     const jwtSecret = process.env.JWT_SECRET || 'activate-secret-key';
 
-    jwt.verify(token, jwtSecret, (err: any, user: any) => {
-        if (err) {
-            writeToLog(logFilenames.misc, "Invalid or expired token: ", err.message);
+    jwt.verify(token, jwtSecret, (err: VerifyErrors | null, user?: string | JwtPayload) => {
+        if (err || !user || !isAuthenticatedUser(user)) {
+            writeToLog(logFilenames.misc, "Invalid or expired token: ", err?.message ?? 'Invalid authentication payload.');
             res.status(403).json({
                 success: false,
                 error: 'Invalid or expired authentication token.'
@@ -55,9 +61,13 @@ export const requireInstructor = (req: AuthenticatedRequest, res: Response, next
 
     const jwtSecret = process.env.JWT_SECRET || 'activate-secret-key';
 
-    jwt.verify(token, jwtSecret, (err: any, user: any) => {
-        if (err) {
-            writeToLog(logFilenames.misc, "Invalid or expired token for instructor operation: ", err.message);
+    jwt.verify(token, jwtSecret, (err: VerifyErrors | null, user?: string | JwtPayload) => {
+        if (err || !user || !isAuthenticatedUser(user)) {
+            writeToLog(
+                logFilenames.misc,
+                "Invalid or expired token for instructor operation: ",
+                err?.message ?? 'Invalid authentication payload.'
+            );
             res.status(403).json({
                 success: false,
                 error: 'Invalid or expired authentication token.'

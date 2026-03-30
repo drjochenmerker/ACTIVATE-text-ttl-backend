@@ -147,7 +147,7 @@ router.post('/settingGen', requireInstructor, async (req, res) => {
         return;
     }
     // Parse setting
-    let generatedTTLObject = {
+    const generatedTTLObject = {
         setting: '',
         entities: '',
     }
@@ -358,7 +358,7 @@ router.post('/submit', requireInstructor, async (req, res) => {
     }
 
     // Parse feedback
-    let generatedTTLObject = {
+    const generatedTTLObject = {
         entities: '',
         tensions: '',
     }
@@ -498,7 +498,7 @@ router.post('/pool', requireInstructor, async (req, res) => {
     }
 
     // Parse feedback
-    let generatedTTLObject = {
+    const generatedTTLObject = {
         entities: '',
         tensions: '',
     }

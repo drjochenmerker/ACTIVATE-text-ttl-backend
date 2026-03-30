@@ -32,7 +32,7 @@ export async function validateTTLObject(obj: Record<string, string>, logFileName
             if (validateCount > 5) {
                 return undefined;
             }
-            let validatorResult = await validate(obj[key]);
+            const validatorResult = await validate(obj[key]);
             writeToLog(logFileName, "Validator Call #" + validateCount, validatorResult)
             if (validatorResult.errors.length > 0) {
                 const fixedTTLResult = await queryLLM(llm, ttlSyntaxFixPrompt, obj[key] + '\n' + JSON.stringify(validatorResult.errors), logFileName);

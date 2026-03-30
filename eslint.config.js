@@ -7,6 +7,9 @@ import prettier from 'eslint-config-prettier';
 /** @type {import("eslint").Linter.FlatConfigItem[]} */
 export default [
     {
+        ignores: ['dist/**'],
+    },
+    {
         files: ['**/*.ts'],
         plugins: {
             '@typescript-eslint': ts,
