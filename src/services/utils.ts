@@ -165,6 +165,12 @@ export function clearLog(filename: string): void {
     fs.writeFileSync(`./logs/${filename}.log`, '', 'utf8'); // Clear the log file
 }
 
+export type LLMQueryResult = {
+    ok: boolean;
+    response?: string;
+    error?: string;
+}
+
 /**
  * Queries the specified Large Language Model (LLM) endpoint.
  *
@@ -175,29 +181,39 @@ export function clearLog(filename: string): void {
  * @param systemPrompt - The system prompt to use.
  * @param activityText - The activity description or context to provide to the LLM.
  * @param logFilename - (Optional) The filename to use for logging the request and response. Defaults to a miscellaneous log file.
- * @returns A promise that resolves to the response from the LLM.
+ * @returns A promise that resolves to a structured LLM query result.
  */
-export async function queryLLM(llm: LLM, systemPrompt: string, activityText: string, logFilename: string = logFilenames.misc): Promise<string> {
+export async function queryLLM(llm: LLM, systemPrompt: string, activityText: string | string[], logFilename: string = logFilenames.misc): Promise<LLMQueryResult> {
 
-    let llmOutput: string = "";
+    let llmOutput: LLMQueryResult = { ok: false, error: 'Unsupported LLM provider' };
     switch (llm.selectedProvider) {
         case 'gemini':
-            llmOutput = await queryGemini(llm, systemPrompt, activityText, logFilename);
+            llmOutput = await queryGemini(llm, systemPrompt, <string>activityText, logFilename);
             break;
         case 'cortecs':
-            llmOutput = await queryCortecs(llm, systemPrompt, activityText, logFilename);
+            llmOutput = await queryCortecs(llm, systemPrompt, <string>activityText, logFilename);
             break;
         case 'chatgpt':
-            llmOutput = await queryChatGPT(llm, systemPrompt, activityText, logFilename);
+            llmOutput = await queryChatGPT(llm, systemPrompt, <string[]>activityText, logFilename);
             break;
         case 'claude':
-            llmOutput = await queryClaude(llm, systemPrompt, activityText, logFilename);
+            llmOutput = await queryClaude(llm, systemPrompt, <string>activityText, logFilename);
             break;
         default:
             break;
     }
 
-    return parseLLMOutput(llmOutput);
+    if (!llmOutput.ok || !llmOutput.response) {
+        return {
+            ok: false,
+            error: llmOutput.error || 'Unknown LLM error',
+        };
+    }
+
+    return {
+        ok: true,
+        response: parseLLMOutput(llmOutput.response),
+    };
 }
 
 import 'dotenv/config';
@@ -213,7 +229,7 @@ import { GoogleGenAI } from '@google/genai';
 /**
  * Generic function to query Gemini safely with retries and timeout handling.
  */
-async function queryGemini(model: LLM, systemPrompt: string, userPrompt: string, logFilename: string = logFilenames.misc): Promise<string> {
+async function queryGemini(model: LLM, systemPrompt: string, userPrompt: string, logFilename: string = logFilenames.misc): Promise<LLMQueryResult> {
     const gemini = new GoogleGenAI({
         apiKey: process.env.GEMINI_API_KEY,
     });
@@ -227,10 +243,13 @@ async function queryGemini(model: LLM, systemPrompt: string, userPrompt: string,
             }
         });
         writeToLog(logFilename, "Gemini Request", response)
-        return response.text || 'error'
+        if (!response.text) {
+            return { ok: false, error: 'Empty response from Gemini' };
+        }
+        return { ok: true, response: response.text };
     } catch (error) {
         console.error('Error querying Gemini:', error);
-        return "error"
+        return { ok: false, error: (error as Error).message || 'unknown-error' };
     }
 }
 
@@ -246,7 +265,7 @@ import Anthropic from '@anthropic-ai/sdk';
 /**
  * Generic function to query Claude safely with retries and timeout handling.
  */
-async function queryClaude(model: LLM, systemPrompt: string, userPrompt: string, logFilename: string = logFilenames.misc): Promise<string> {
+async function queryClaude(model: LLM, systemPrompt: string, userPrompt: string, logFilename: string = logFilenames.misc): Promise<LLMQueryResult> {
     const claude = new Anthropic({
         apiKey: process.env.ANTHROPIC_API_KEY,
     });
@@ -261,10 +280,14 @@ async function queryClaude(model: LLM, systemPrompt: string, userPrompt: string,
         });
 
         writeToLog(logFilename, "Claude Request", message)
-        return (message.content[0] as Anthropic.TextBlock).text || 'error'; // Type cast to avoid type errors
+        const text = (message.content[0] as Anthropic.TextBlock).text;
+        if (!text) {
+            return { ok: false, error: 'Empty response from Claude' };
+        }
+        return { ok: true, response: text };
     } catch (error) {
         console.error('Error querying Claude:', error);
-        return "error"
+        return { ok: false, error: (error as Error).message || 'unknown-error' };
     }
 }
 
@@ -280,28 +303,41 @@ import OpenAI from 'openai';
 /**
  * Generic function to query ChatGPT safely with retries and timeout handling.
  */
-async function queryChatGPT(model: LLM, systemPrompt: string, userPrompt: string, logFilename: string = logFilenames.misc): Promise<string> {
+async function queryChatGPT(model: LLM, systemPrompt: string, userPrompt: string | string[], logFilename: string = logFilenames.misc): Promise<LLMQueryResult> {
 
     const chatgpt = new OpenAI(
         { apiKey: process.env.OPENAI_API_KEY }
     );
 
     try {
+        let combinedPrompt: string = "";
+
+        // ChatGPT only accepts strings, therefore userPrompt has to be converted if it is an array
+        if (!Array.isArray(userPrompt)) {
+            combinedPrompt = userPrompt;
+        } else {
+            for (let x = 0; x < userPrompt.length; x++) {
+                combinedPrompt += userPrompt[x];
+            }
+        }
         const message = await chatgpt.responses.create({
             model: model.modelName,
-            input: userPrompt,
+            input: combinedPrompt,
             instructions: systemPrompt,
         });
 
         writeToLog(logFilename, "ChatGPT Request", message);
-        return message.output_text || 'error';
+        if (!message.output_text) {
+            return { ok: false, error: 'Empty response from ChatGPT' };
+        }
+        return { ok: true, response: message.output_text };
     } catch (error) {
         console.error('Error querying ChatGPT:', error);
-        return "error"
+        return { ok: false, error: (error as Error).message || 'unknown-error' };
     }
 }
 
-async function queryCortecs(model: LLM, systemPrompt: string, userPrompt: string, logFilename: string = logFilenames.misc): Promise<string> {
+async function queryCortecs(model: LLM, systemPrompt: string, userPrompt: string, logFilename: string = logFilenames.misc): Promise<LLMQueryResult> {
     const cortecs = new OpenAI(
         {
             apiKey: process.env.CORTECS_API_KEY,
@@ -309,19 +345,33 @@ async function queryCortecs(model: LLM, systemPrompt: string, userPrompt: string
         }
     );
     try {
+        let combinedPrompt: string = "";
+
+        // Cortecs only accepts strings, therefore userPrompt has to be converted if it is an array
+        if (!Array.isArray(userPrompt)) {
+            combinedPrompt = userPrompt;
+        } else {
+            for (let x = 0; x < userPrompt.length; x++) {
+                combinedPrompt += userPrompt[x];
+            }
+        }
         const completion = await cortecs.chat.completions.create({
             model: model.modelName,
             messages: [
                 { role: "system", content: systemPrompt },
-                { role: "user", content: userPrompt }
+                { role: "user", content: combinedPrompt }
             ],
             temperature: model.temperature,
         });
 
         writeToLog(logFilename, "Cortecs Request with model " + model.modelName, completion);
-        return completion.choices[0].message.content || 'error';
+        const content = completion.choices[0].message.content;
+        if (!content) {
+            return { ok: false, error: 'Empty response from Cortecs' };
+        }
+        return { ok: true, response: content };
     } catch (error) {
         console.error('Error querying Cortecs with model ' + model.modelName + ':', error);
-        return "error"
+        return { ok: false, error: (error as Error).message || 'unknown-error' };
     }
 }

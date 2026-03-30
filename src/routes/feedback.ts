@@ -3,12 +3,37 @@ import { Router } from 'express';
 import { errorMessages, logFilenames } from '../data/staticContent.js';
 import { removeAtLines, queryLLM, writeToLog } from '../services/utils.js';
 import { getPredefinedEntitiesForPrompt } from '../data/requiredEntities.js';
+import type { LLMQueryResult } from '../services/utils.js';
 import { validateTTLObject } from '../services/validator.js';
 import { feedbackSystemPrompts, settingGenerationPrompts, ttlMergePrompts } from '../data/prompts.js';
 import { LLM } from '../data/types.js';
 import { requireInstructor } from '../middleware/auth.js';
 
 const router = Router();
+
+function buildLlmErrorResponse(
+    baseError: string | { en?: string; de?: string; sv?: string },
+    llmError: string
+) {
+    // Convert string to multilingual object if needed
+    const baseErrorObject = typeof baseError === 'string'
+        ? { en: baseError, de: baseError, sv: baseError }
+        : baseError;
+    const normalizedError = llmError && llmError.trim().length > 0 ? llmError : 'empty-response';
+
+    return {
+        error: baseErrorObject,
+        llmError: normalizedError,
+    };
+}
+
+function isLLMQueryResult(obj: unknown): obj is LLMQueryResult {
+    return typeof obj === 'object' && obj !== null && 'ok' in obj && 'error' in obj;
+}
+
+function hasLLMError(obj: unknown): obj is LLMQueryResult {
+    return isLLMQueryResult(obj) && !obj.ok;
+}
 
 /**
  * @swagger
@@ -116,7 +141,7 @@ router.post('/settingGen', requireInstructor, async (req, res) => {
 
     // Check if request has all required fields
     if (!description) {
-        res.status(200).json({
+        res.status(400).json({
             error: errorMessages.missingFields,
         });
         return;
@@ -127,19 +152,19 @@ router.post('/settingGen', requireInstructor, async (req, res) => {
         entities: '',
     }
     let result: string;
+    let llmResult: LLMQueryResult;
     writeToLog(logFilenames.feedback, "Starting Setting Generator", '');
 
-    result = await queryLLM(llmDetail, knowledgeGraphGenerationPrompt ?? settingGenerationPrompts[0],
+    llmResult = await queryLLM(llmDetail, knowledgeGraphGenerationPrompt ?? settingGenerationPrompts[0],
         `Description: ${description}
         Title: ${title}`,
         logFilenames.feedback);
 
-    if (result === 'error' || result.length === 0) {
-        res.status(200).json({
-            error: errorMessages.generationFailed,
-        });
+    if (!llmResult.ok || !llmResult.response) {
+        res.status(500).json(buildLlmErrorResponse(errorMessages.generationFailed, llmResult.error || 'error'));
         return;
     }
+    result = llmResult.response;
     generatedTTLObject.setting = result;
 
     // Get predefined entities for prompt context
@@ -147,27 +172,31 @@ router.post('/settingGen', requireInstructor, async (req, res) => {
     const entityPrompt = (entityAssignmentPrompt ?? settingGenerationPrompts[1])
         .replace('{{PREDEFINED_ENTITIES}}', predefinedEntitiesForPrompt);
 
-    result = await queryLLM(llmDetail, entityPrompt,
+    llmResult = await queryLLM(llmDetail, entityPrompt,
         `Description: ${description}
         Default Entity: ${defaultRole}`,
         logFilenames.feedback);
 
-    if (result === 'error' || result.length === 0) {
-        res.status(200).json({
-            error: errorMessages.generationFailed,
-        });
+    if (!llmResult.ok || !llmResult.response) {
+        res.status(500).json(buildLlmErrorResponse(errorMessages.generationFailed, llmResult.error || 'error'));
         return;
     }
+    result = llmResult.response;
     generatedTTLObject.entities = result;
 
     // Validate generated TTL
     const validatorRes = await validateTTLObject(generatedTTLObject, logFilenames.feedback, llmDetail)
     if (!validatorRes) {
-        res.status(200).json({
+        res.status(500).json({
             error: errorMessages.validationFailed,
         });
         return;
     }
+    if (hasLLMError(validatorRes)) {
+        res.status(500).json(buildLlmErrorResponse(errorMessages.generatorValidationFailed, validatorRes.error || 'error'));
+        return;
+    }
+
     // Merge and return
     writeToLog(logFilenames.feedback, "Generated TTL", validatorRes.setting + "\n" + removeAtLines(validatorRes.entities));
     res.json({
@@ -304,56 +333,78 @@ router.post('/submit', requireInstructor, async (req, res) => {
 
     // Check if request has all required fields
     if (!feedbackSetting || !feedback || !llmDetail) {
-        res.status(200).json({
+        res.status(400).json({
             error: errorMessages.missingFields,
         });
         return;
     }
+
+    // Check if all feedback answers are filled
+    const feedbackData = JSON.parse(feedback);
+    if (feedbackData.data && Array.isArray(feedbackData.data)) {
+        const hasEmptyAnswers = feedbackData.data.some((item: unknown) => {
+            if (typeof item === 'object' && item !== null && 'answer' in item) {
+                const answer = (item as { answer: unknown }).answer;
+                return typeof answer !== 'string' || answer.trim() === '';
+            }
+            return true;
+        });
+        if (hasEmptyAnswers) {  
+                res.status(400).json({
+                error: errorMessages.missingFields,
+            });
+            return;
+        }
+    }
+
     // Parse feedback
     let generatedTTLObject = {
         entities: '',
         tensions: '',
     }
     let result: string;
+    let llmResult: LLMQueryResult;
     writeToLog(logFilenames.feedback, "Starting Submission Parser", '');
 
     // Entity Extraction
-    result = await queryLLM(llmDetail, entityExtractionPrompt ?? feedbackSystemPrompts[0], `
+    llmResult = await queryLLM(llmDetail, entityExtractionPrompt ?? feedbackSystemPrompts[0], `
         Setting: ${feedbackSetting}
         Existing Entities: ${settingEntities}
         Feedback: ${feedback}
     `, logFilenames.feedback);
 
-    if (result === 'error' || result.length === 0) {
-        res.status(200).json({
-            error: errorMessages.generationFailed,
-        });
+    if (!llmResult.ok || !llmResult.response) {
+        res.status(500).json(buildLlmErrorResponse(errorMessages.generationFailed, llmResult.error || 'error'));
         return;
     }
+    result = llmResult.response;
     generatedTTLObject.entities = result;
 
     // Tension Extraction
-    result = await queryLLM(llmDetail, tensionExtractionPrompt ?? feedbackSystemPrompts[1], `
+    llmResult = await queryLLM(llmDetail, tensionExtractionPrompt ?? feedbackSystemPrompts[1], `
         Setting: ${feedbackSetting}
         Existing Entities: ${settingEntities} and ${generatedTTLObject.entities}
         Feedback: ${feedback}
         Timestamp: ${new Date().toISOString()}
     `, logFilenames.feedback);
 
-    if (result === 'error' || result.length === 0) {
-        res.status(200).json({
-            error: errorMessages.generationFailed,
-        });
+    if (!llmResult.ok || !llmResult.response) {
+        res.status(500).json(buildLlmErrorResponse(errorMessages.generationFailed, llmResult.error || 'error'));
         return;
     }
+    result = llmResult.response;
     generatedTTLObject.tensions = result;
 
     // Validate generated TTL
     const validatorRes = await validateTTLObject(generatedTTLObject, logFilenames.feedback, llmDetail)
     if (!validatorRes) {
-        res.status(200).json({
+        res.status(500).json({
             error: errorMessages.validationFailed,
         });
+        return;
+    }
+    if (hasLLMError(validatorRes)) {
+        res.status(500).json(buildLlmErrorResponse(errorMessages.generatorValidationFailed, validatorRes.error || 'error'));
         return;
     }
     writeToLog(logFilenames.feedback, "Generated TTL", removeAtLines(validatorRes.entities) + "\n#####\n" + validatorRes.tensions);
@@ -440,7 +491,7 @@ router.post('/pool', requireInstructor, async (req, res) => {
 
     // Check if request has all required fields
     if (!entityPool || !tensionPool || !llmDetail) {
-        res.status(200).json({
+        res.status(400).json({
             error: errorMessages.missingFields,
         });
         return;
@@ -452,40 +503,43 @@ router.post('/pool', requireInstructor, async (req, res) => {
         tensions: '',
     }
     let result: string;
+    let llmResult: LLMQueryResult;
     writeToLog(logFilenames.feedback, "Starting semantic merging process", '');
 
     // Entity Merge
-    result = await queryLLM(llmDetail, turtleFileMergePrompt ?? ttlMergePrompts[0], entityPool, logFilenames.feedback);
+    llmResult = await queryLLM(llmDetail, turtleFileMergePrompt ?? ttlMergePrompts[0], entityPool, logFilenames.feedback);
 
-    if (result === 'error' || result.length === 0) {
-        res.status(200).json({
-            error: errorMessages.generationFailed,
-        });
+    if (!llmResult.ok || !llmResult.response) {
+        res.status(500).json(buildLlmErrorResponse(errorMessages.generationFailed, llmResult.error || 'error'));
         return;
     }
+    result = llmResult.response;
     generatedTTLObject.entities = result;
 
     // Tension Merge
-    result = await queryLLM(llmDetail,
+    llmResult = await queryLLM(llmDetail,
         tensionExtractionPrompt ?? feedbackSystemPrompts[1],
         `Tensions: ${tensionPool}
         Entities: ${generatedTTLObject.entities}`,
         logFilenames.feedback);
 
-    if (result === 'error' || result.length === 0) {
-        res.status(200).json({
-            error: errorMessages.generationFailed,
-        });
+    if (!llmResult.ok || !llmResult.response) {
+        res.status(500).json(buildLlmErrorResponse(errorMessages.generationFailed, llmResult.error || 'error'));
         return;
     }
+    result = llmResult.response;
     generatedTTLObject.tensions = result;
 
     // Validate generated TTL
     const validatorRes = await validateTTLObject(generatedTTLObject, logFilenames.feedback, llmDetail)
     if (!validatorRes) {
-        res.status(200).json({
+        res.status(500).json({
             error: errorMessages.validationFailed,
         });
+        return;
+    }
+    if (hasLLMError(validatorRes)) {
+        res.status(500).json(buildLlmErrorResponse(errorMessages.generatorValidationFailed, validatorRes.error || 'error'));
         return;
     }
     writeToLog(logFilenames.feedback, "Generated TTL", validatorRes.entities + "\n#####\n" + validatorRes.tensions);
