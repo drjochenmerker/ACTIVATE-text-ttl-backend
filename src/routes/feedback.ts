@@ -7,6 +7,7 @@ import type { LLMQueryResult } from '../services/utils.js';
 import { validateTTLObject } from '../services/validator.js';
 import { feedbackSystemPrompts, settingGenerationPrompts, ttlMergePrompts } from '../data/prompts.js';
 import { LLM } from '../data/types.js';
+import { requireInstructor } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -127,7 +128,7 @@ function hasLLMError(obj: unknown): obj is LLMQueryResult {
  *                   :Nurse1 a :Subject, owl:NamedIndividual ;
  *                       rdfs:label "Hospice Nurse"@en .
  */
-router.post('/settingGen', async (req, res) => {
+router.post('/settingGen', requireInstructor, async (req, res) => {
     writeToLog(logFilenames.feedback, "Trying to generate setting: ", JSON.stringify(req.body));
     const description = req.body.description;
     const title = req.body.title;
@@ -146,7 +147,7 @@ router.post('/settingGen', async (req, res) => {
         return;
     }
     // Parse setting
-    let generatedTTLObject = {
+    const generatedTTLObject = {
         setting: '',
         entities: '',
     }
@@ -320,7 +321,7 @@ router.post('/settingGen', async (req, res) => {
  *                   type: string
  *                   description: Error message if generation or validation failed.
  */
-router.post('/submit', async (req, res) => {
+router.post('/submit', requireInstructor, async (req, res) => {
     writeToLog(logFilenames.feedback, "Trying to parse feedback: ", JSON.stringify(req.body));
     const feedbackSetting = req.body.setting;
     const settingEntities = JSON.stringify(req.body.entities) || [];
@@ -357,7 +358,7 @@ router.post('/submit', async (req, res) => {
     }
 
     // Parse feedback
-    let generatedTTLObject = {
+    const generatedTTLObject = {
         entities: '',
         tensions: '',
     }
@@ -479,7 +480,7 @@ router.post('/submit', async (req, res) => {
  *                   description: Error message if merging or validation failed.
  */
 
-router.post('/pool', async (req, res) => {
+router.post('/pool', requireInstructor, async (req, res) => {
     writeToLog(logFilenames.feedback, "Trying to pool results: ", JSON.stringify(req.body));
     const entityPool = req.body.entities;
     const tensionPool = req.body.tensions;
@@ -497,7 +498,7 @@ router.post('/pool', async (req, res) => {
     }
 
     // Parse feedback
-    let generatedTTLObject = {
+    const generatedTTLObject = {
         entities: '',
         tensions: '',
     }
