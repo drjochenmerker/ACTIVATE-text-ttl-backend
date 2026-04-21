@@ -2,6 +2,7 @@
     "name": "text-ttl-backend",
     "version": "0.0.1",
     "main": "index.js",
+    "type": "module",
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
         "build": "tsc",
@@ -17,12 +18,15 @@
     "license": "ISC",
     "description": "",
     "dependencies": {
+        "@anthropic-ai/sdk": "^0.74.0",
         "@google/genai": "^0.15.0",
+        "@types/bcrypt": "^6.0.0",
+        "bcrypt": "^6.0.0",
         "dotenv": "^16.5.0",
         "express": "^5.1.0",
         "n3": "^1.26.0",
         "ollama": "^0.5.15",
-        "openai": "^4.100.0",
+        "openai": "^4.104.0",
         "socket.io": "^4.8.1",
         "swagger-jsdoc": "^6.2.8",
         "swagger-ui-express": "^5.0.1",
@@ -41,6 +45,5 @@
         "prettier": "^3.5.3",
         "ts-node-dev": "^2.0.0",
         "tsx": "^4.20.3"
-    },
-    "type": "module"
+    }
 }

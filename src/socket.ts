@@ -6,7 +6,7 @@ let io: IOServer;
 export function setupSocketIO(server: HTTPServer) {
     io = new IOServer(server, {
         cors: {
-            origin: `${process.env.ACTIVATE_URL}:${process.env.ACTIVATE_PORT}`,
+            origin: `${process.env.ACTIVATE_URL}${!process.env.ACTIVATE_PORT ? '' : ':' + process.env.ACTIVATE_PORT}`,
             methods: ['GET', 'POST'],
         },
     });

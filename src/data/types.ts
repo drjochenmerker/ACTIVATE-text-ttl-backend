@@ -11,21 +11,9 @@ type multiLanguageString = {
 // LLM type definition
 export type LLM = {
     id: string;
-    name: string;
-    endpoint: string;
+    modelName: string;
+    selectedProvider: string;
     description: multiLanguageString;
+    temperature: number;
+    organizationId: string | null;
 };
-// Generator-Pipeline type definition
-export type GeneratorPipeline = {
-    id: string;
-    name: multiLanguageString;
-    description: multiLanguageString;
-};
-// Prompt Shot Type
-export enum PromptShot {
-    zero,
-    zeroPlusVocab,
-    one,
-    onePlusVocab,
-    few,
-}

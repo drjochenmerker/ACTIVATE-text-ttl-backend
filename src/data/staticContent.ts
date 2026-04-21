@@ -4,29 +4,34 @@
  */
 export const errorMessages = {
     missingFields: {
-        en: "Generator, LLM or Input-Text is missing",
-        de: "Generator, LLM oder Eingabetext fehlt",
+        en: "Generator, LLM or Input-Text is missing.",
+        de: "Generator, LLM oder Eingabetext fehlt.",
         sv: "Generator, LLM eller inmatningstext saknas",
     },
     unsupportedLLM: {
-        en: 'Chosen LLM currently not supported',
-        de: 'Gewähltes LLM wird derzeit nicht unterstützt',
-        sv: 'Valt LLM stöds för närvarande inte',
+        en: 'Chosen LLM currently not supported.',
+        de: 'Gewähltes LLM wird derzeit nicht unterstützt.',
+        sv: 'Valt LLM stöds för närvarande inte.',
     },
     unsupportedGenerator: {
-        en: 'Chosen generator currently not supported',
-        de: 'Gewählter Generator wird derzeit nicht unterstützt',
-        sv: 'Vald generator stöds för närvarande inte',
+        en: 'Chosen generator currently not supported.',
+        de: 'Gewählter Generator wird derzeit nicht unterstützt.',
+        sv: 'Vald generator stöds för närvarande inte.',
     },
     validationFailed: {
-        en: 'Validation of the generated Turtle Syntax failed after multiple attempts',
-        de: 'Validierung der generierten Turtle-Syntax ist nach mehreren Versuchen fehlgeschlagen',
-        sv: 'Validering av den genererade Turtle-syntaxen misslyckades efter flera försök',
+        en: 'Validation of the generated Turtle Syntax failed after multiple attempts.',
+        de: 'Validierung der generierten Turtle-Syntax ist nach mehreren Versuchen fehlgeschlagen.',
+        sv: 'Validering av den genererade Turtle-syntaxen misslyckades efter flera försök.',
+    },
+    generatorValidationFailed: {
+        en: 'The chosen generator could not validate the Turtle syntax. Please try again later or change the LLM configuration.',
+        de: 'Der gewählte Generator konnte die Turtle-Syntax nicht validieren. Bitte versuchen Sie es später erneut oder ändern Sie die LLM-Konfiguration.',
+        sv: 'Den valda generatorn kunde inte validera Turtle-syntaxen. Försök igen senare eller ändra LLM-konfigurationen.',
     },
     generationFailed: {
-        en: 'The chosen generator failed to generate Turtle Syntax',
-        de: 'Der gewählte Generator konnte keine Turtle-Syntax generieren',
-        sv: 'Den valda generatorn misslyckades med att generera Turtle-syntax',
+        en: 'The chosen generator failed to generate Turtle Syntax. Please try again later or change the LLM configuration.',
+        de: 'Der gewählte Generator konnte keine Turtle-Syntax generieren. Bitte versuchen Sie es später erneut oder ändern Sie die LLM-Konfiguration.',
+        sv: 'Den valda generatorn misslyckades med att generera Turtle-syntax. Försök igen senare eller ändra LLM-konfigurationen.',
     },
 }
 
@@ -84,4 +89,5 @@ export const logFilenames = {
     misc: 'misc',
     start: 'generator-start',
     edit: 'generator-edit',
+    feedback: 'feedback',
 }

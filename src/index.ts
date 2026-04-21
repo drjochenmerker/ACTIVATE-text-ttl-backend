@@ -6,11 +6,16 @@ import { rateLimit } from 'express-rate-limit';
 import cors from 'cors';
 import { createServer } from 'node:http';
 import { setupSocketIO } from './socket.js';
+import dotenv from 'dotenv';
 
 const app = express();
-app.use(express.json());
+app.use(express.json({limit: "50mb"}));
+app.set('trust proxy', 1);
 const server = createServer(app);
+server.setTimeout(300000); // TODO: set to 5 minutes
 const port = process.env.BACKEND_PORT || 8500;
+
+dotenv.config({ path: '../.env' });
 
 // Swagger Setup
 const swaggerSpec = swaggerJsdoc({
@@ -29,17 +34,17 @@ const swaggerSpec = swaggerJsdoc({
 // Middleware
 app.use(
     cors({
-        origin: `${process.env.ACTIVATE_URL}:${process.env.ACTIVATE_PORT}`,
+        origin: `${process.env.ACTIVATE_URL}${!process.env.ACTIVATE_PORT ? '' : ':' + process.env.ACTIVATE_PORT}`,
         methods: ['GET', 'POST'],
         credentials: true,
     })
 );
 
-// Rate Limiter -- 15 Minutes, 100 requests
+// Rate Limiter -- 1 Minute, 250 requests
 app.use(
     rateLimit({
-        windowMs: 15 * 60 * 1000,
-        limit: 100,
+        windowMs: 1 * 60 * 1000,
+        limit: 250,
         standardHeaders: 'draft-8',
         legacyHeaders: false,
         message: 'Too many requests, please try again later.',
